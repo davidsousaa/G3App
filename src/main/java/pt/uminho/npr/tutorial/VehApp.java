@@ -29,6 +29,7 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     private double vehHeading;
     private double vehSpeed;
     private int vehLane;
+    //add RSU flag and neighbors list
 
     @Override
     public void onShutdown() {
