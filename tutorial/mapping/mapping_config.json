@@ -1,46 +1,72 @@
 {
-    "prototypes": [
+  "prototypes": [
+    {
+      "name": "Car",
+      "accel": 2.6,
+      "decel": 4.5,
+      "length": 5.0,
+      "maxSpeed": 70.0,
+      "minGap": 2.5,
+      "sigma": 0.5,
+      "speedDeviation": 0.1,
+      "tau": 1,
+      "applications": ["pt.uminho.npr.tutorial.VehApp"]
+    },
+    {
+      "name": "RSU",
+      "applications": ["pt.uminho.npr.tutorial.RoadSideUnitApp"]
+    }
+  ],
+  "rsus": [
+    {
+      "name": "RSU",
+      "position": {
+        "latitude": 41.558413,
+        "longitude": -8.396634
+      },
+      "applications": ["pt.uminho.npr.tutorial.RoadSideUnitApp"]
+    },
+    {
+      "name": "RSU",
+      "position": {
+        "latitude": 41.558434,
+        "longitude": -8.400783
+      },
+      "applications": ["pt.uminho.npr.tutorial.RoadSideUnitApp"]
+    },
+    {
+      "name": "RSU",
+      "position": {
+        "latitude": 41.558386,
+        "longitude": -8.39162
+      },
+      "applications": ["pt.uminho.npr.tutorial.RoadSideUnitApp"]
+    }
+  ],
+  "vehicles": [
+    {
+      "startingTime": "0.2 s",
+      "endingTime": "950.0 s",
+      "targetFlow": 1800,
+      "route": "r_0",
+      "LaneSelectionMode": "RANDOM",
+      "types": [
         {
-            "name": "Car",
-            "accel": 2.6,
-            "decel": 4.5,
-            "length": 5.00,
-            "maxSpeed": 70.0,
-            "minGap": 2.5,
-            "sigma": 0.5,
-            "speedDeviation": 0.1,
-            "tau": 1,
-            "applications": [
-                "pt.uminho.npr.tutorial.VehApp"
-            ]
+          "name": "Car"
         }
-    ],
-    "vehicles": [
+      ]
+    },
+    {
+      "startingTime": "0.2 s",
+      "targetFlow": 900,
+      "maxNumberVehicles": 235,
+      "route": "r_1",
+      "LaneSelectionMode": "RANDOM",
+      "types": [
         {
-            "startingTime": "0.2 s",
-            "endingTime": "950.0 s",
-            "targetFlow": 1800,
-            "route": "r_0",
-            "LaneSelectionMode": "RANDOM",
-            "types": [
-                {
-                    "name": "Car"
-                }
-            ]
-        },
-        {
-            "startingTime": "0.2 s",
-            "targetFlow": 900,
-            "maxNumberVehicles": 235,
-            "route": "r_1",
-            "LaneSelectionMode": "RANDOM",
-            "types": [
-                {
-                    "name": "Car"
-                }
-            ]
+          "name": "Car"
         }
-    ]
+      ]
+    }
+  ]
 }
-
-
