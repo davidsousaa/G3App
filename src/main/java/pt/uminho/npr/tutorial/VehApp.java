@@ -80,7 +80,7 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     }
 
     @Override
-    public void onAcknowledgementReceived55(ReceivedAcknowledgement arg0) {
+    public void onAcknowledgementReceived(ReceivedAcknowledgement arg0) {
         getLog().infoSimTime(this, "onAcknowledgementReceived");
 
     }
@@ -97,4 +97,4 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         getOs().getAdHocModule().sendV2xMessage(message);
         getLog().infoSimTime(this, "Sent VehInfoMsg: " + message.toString());
     }
-}1
+}
