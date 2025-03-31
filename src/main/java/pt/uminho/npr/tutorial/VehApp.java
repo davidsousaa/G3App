@@ -17,6 +17,11 @@ import org.eclipse.mosaic.rti.TIME;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.Map;
+import org.eclipse.mosaic.lib.geo.GeoPoint;
+import org.eclipse.mosaic.lib.objects.v2x.V2xMessage;
+import org.eclipse.mosaic.lib.geo.MutableGeoPoint;
 
 public class VehApp extends AbstractApplication<VehicleOperatingSystem> implements VehicleApplication, CommunicationApplication
 {
@@ -30,6 +35,9 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     private double vehSpeed;
     private int vehLane;
     //add RSU flag and neighbors list
+
+    private Map<String, VehInfoMsg> neighbors = new HashMap<>();
+    private GeoPoint rsuPos = new MutableGeoPoint(0.0, 0.0);
 
     @Override
     public void onShutdown() {
@@ -62,6 +70,19 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     @Override
     public void onMessageReceived(ReceivedV2xMessage arg0) {
         getLog().infoSimTime(this, "onMessageReceived");
+        //TODO: process received message
+
+        V2xMessage msg = arg0.getMessage();
+        if(msg instanceof VehInfoMsg){
+            VehInfoMsg vehInfoMsg = (VehInfoMsg) msg;
+            String id = vehInfoMsg.getSenderName();
+            if(neighbors.containsKey(id)){
+                neighbors.replace(id, vehInfoMsg);
+            }else{
+                neighbors.put(id, vehInfoMsg);
+            }
+        }
+        // log neighbors table to output.csv
     }
 
     @Override
