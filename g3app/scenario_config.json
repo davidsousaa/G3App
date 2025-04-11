@@ -1,6 +1,6 @@
 {
     "simulation": {
-        "id": "tutorial",
+        "id": "g3app",
         "duration": "1000s",
         "randomSeed": 268965854,
         "projection": {

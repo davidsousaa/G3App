@@ -1,4 +1,4 @@
-package pt.uminho.npr.tutorial;
+package pt.uminho.npr.g3app;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
