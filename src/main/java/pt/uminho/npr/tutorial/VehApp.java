@@ -22,6 +22,7 @@ import java.util.Map;
 import org.eclipse.mosaic.lib.geo.GeoPoint;
 import org.eclipse.mosaic.lib.objects.v2x.V2xMessage;
 import org.eclipse.mosaic.lib.geo.MutableGeoPoint;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class VehApp extends AbstractApplication<VehicleOperatingSystem> implements VehicleApplication, CommunicationApplication
 {
@@ -36,7 +37,9 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     private int vehLane;
     //add RSU flag and neighbors list
 
-    private Map<String, VehInfoMsg> neighbors = new HashMap<>();
+    private Map<String, VehInfoMsg> neighbors = new ConcurrentHashMap<>();
+    private Map<String, Long> neighborsTimestamps = new ConcurrentHashMap<>();
+    private final Long NeighborTimeout = 500 * TIME.MILLI_SECOND;
     private GeoPoint rsuPos = new MutableGeoPoint(0.0, 0.0);
 
     @Override
@@ -75,14 +78,37 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         V2xMessage msg = arg0.getMessage();
         if(msg instanceof VehInfoMsg){
             VehInfoMsg vehInfoMsg = (VehInfoMsg) msg;
-            String id = vehInfoMsg.getSenderName();
-            if(neighbors.containsKey(id)){
-                neighbors.replace(id, vehInfoMsg);
-            }else{
-                neighbors.put(id, vehInfoMsg);
-            }
+            updateNeighbors(vehInfoMsg);
         }
         // log neighbors table to output.csv
+    }
+
+    
+    public void updateNeighbors(VehInfoMsg vehInfoMsg){
+        String id = vehInfoMsg.getSenderName();
+        if(neighbors.containsKey(id)){
+            neighbors.replace(id, vehInfoMsg);  
+            neighborsTimestamps.replace(id, getOs().getSimulationTime());
+
+        }else{
+            neighbors.put(id, vehInfoMsg);
+            neighborsTimestamps.put(id, getOs().getSimulationTime());
+        }
+        long currentTime = getOs().getSimulationTime();
+        
+    }
+
+    // Em vez que fazer os loops, podemos remover apenas quando precisamos de usar os neighbous e, se o timestamp for maior que o timeout, ignore e remove
+        public void removeOldNeighbors(){
+        long currentTime = getOs().getSimulationTime();
+        for (Map.Entry<String, Long> entry : neighborsTimestamps.entrySet()) {
+            String id = entry.getKey();
+            long timestamp = entry.getValue();
+            if (currentTime - timestamp > NeighborTimeout) {
+                neighbors.remove(id);
+                neighborsTimestamps.remove(id);
+            }
+        }
     }
 
     @Override
