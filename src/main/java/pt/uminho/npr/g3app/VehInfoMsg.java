@@ -74,7 +74,6 @@ public class VehInfoMsg extends V2xMessage {
     public long getTimeStamp() {
         return timeStamp;
     }
-
     public String getSenderName() {
         return senderName;
     }
