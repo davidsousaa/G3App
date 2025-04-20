@@ -1,4 +1,4 @@
-package pt.uminho.npr.tutorial;
+package pt.uminho.npr.g3app;
 
 import javax.annotation.Nonnull;
 

@@ -10,11 +10,11 @@
       "sigma": 0.5,
       "speedDeviation": 0.1,
       "tau": 1,
-      "applications": ["pt.uminho.npr.tutorial.VehApp"]
+      "applications": ["pt.uminho.npr.g3app.VehApp"]
     },
     {
       "name": "RSU",
-      "applications": ["pt.uminho.npr.tutorial.RoadSideUnitApp"]
+      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
     }
   ],
   "rsus": [
@@ -24,7 +24,7 @@
         "latitude": 41.558413,
         "longitude": -8.396634
       },
-      "applications": ["pt.uminho.npr.tutorial.RoadSideUnitApp"]
+      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
     },
     {
       "name": "RSU",
@@ -32,7 +32,7 @@
         "latitude": 41.558434,
         "longitude": -8.400783
       },
-      "applications": ["pt.uminho.npr.tutorial.RoadSideUnitApp"]
+      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
     },
     {
       "name": "RSU",
@@ -40,7 +40,7 @@
         "latitude": 41.558386,
         "longitude": -8.39162
       },
-      "applications": ["pt.uminho.npr.tutorial.RoadSideUnitApp"]
+      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
     }
   ],
   "vehicles": [

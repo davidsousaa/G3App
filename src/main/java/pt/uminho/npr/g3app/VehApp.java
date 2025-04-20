@@ -1,4 +1,4 @@
-package pt.uminho.npr.tutorial;
+package pt.uminho.npr.g3app;
 
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.AdHocModuleConfiguration;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.CamBuilder;
@@ -80,7 +80,7 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
             VehInfoMsg vehInfoMsg = (VehInfoMsg) msg;
             updateNeighbors(vehInfoMsg);
         }
-        // log neighbors table to output.csv
+        // log neighbors table to output.csv (can be done in onShutdown())
     }
 
     
