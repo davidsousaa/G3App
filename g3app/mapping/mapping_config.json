@@ -15,6 +15,10 @@
     {
       "name": "RSU",
       "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
+    },
+    {
+      "name": "FogNode",
+      "applications": ["pt.uminho.npr.g3app.FogNodeApp"]
     }
   ],
   "rsus": [
@@ -68,5 +72,15 @@
         }
       ]
     }
-  ]
+  ],
+  "fogNodes": [
+    {
+      "name": "fog1",
+      "position": {
+        "latitude": 41.558400,
+        "longitude": -8.397000
+      },
+      "applications": ["pt.uminho.npr.g3app.FogNodeApp"]
+    }
+]
 }

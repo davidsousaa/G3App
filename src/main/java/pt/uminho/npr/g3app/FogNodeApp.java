@@ -1,21 +1,27 @@
 package pt.uminho.npr.g3app;
 
 import javax.annotation.Nonnull;
+
+import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.CamBuilder;
+import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.CellModuleConfiguration;
+import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.ReceivedV2xMessage;
 import org.eclipse.mosaic.fed.application.app.AbstractApplication;
 import org.eclipse.mosaic.fed.application.app.api.CommunicationApplication;
 import org.eclipse.mosaic.fed.application.app.api.os.ServerOperatingSystem;
-import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.ReceivedV2xMessage;
-import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.CamBuilder;
 import org.eclipse.mosaic.interactions.communication.V2xMessageTransmission;
 import org.eclipse.mosaic.lib.util.scheduling.Event;
+import org.eclipse.mosaic.rti.DATA;
 
 public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
         implements CommunicationApplication {
 
     @Override
     public void onStartup() {
-        getLog().infoSimTime(this, "Fog Node started.");
-    }
+    getOs().getCellModule().enable(new CellModuleConfiguration()
+            .maxDownlinkBitrate(50 * DATA.MEGABIT)
+            .maxUplinkBitrate(50 * DATA.MEGABIT));
+    getLog().infoSimTime(this, "Fog Node started with cellular module enabled.");
+}
 
     @Override
     public void onShutdown() {
