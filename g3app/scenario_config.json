@@ -27,6 +27,7 @@
         "application": true,
         "sns": true,
         "output": true,
-        "sumo": true
+        "sumo": true,
+        "server": true
     }
 }
