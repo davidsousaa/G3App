@@ -72,12 +72,15 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
 
     @Override
     public void onMessageReceived(ReceivedV2xMessage arg0) {
-        getLog().infoSimTime(this, "onMessageReceived");
+        //getLog().infoSimTime(this, "onMessageReceived");
         //TODO: process received message
 
         V2xMessage msg = arg0.getMessage();
         if(msg instanceof VehInfoMsg){
             VehInfoMsg vehInfoMsg = (VehInfoMsg) msg;
+            if(vehInfoMsg.getSenderName().equals(getOs().getId())) {
+                return;
+            }
             updateNeighbors(vehInfoMsg);
         }
         // log neighbors table to output.csv (can be done in onShutdown())

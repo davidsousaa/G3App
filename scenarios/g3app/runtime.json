@@ -1,0 +1,17 @@
+{
+    "subscriptions": {
+      "fog_1": {
+        "interactions": ["RsuFogInteraction"]
+      },
+      "rsu_0": {
+        "interactions": []
+      },
+      "rsu_1": {
+        "interactions": []
+      },
+      "rsu_2": {
+        "interactions": []
+      }
+    }
+  }
+  

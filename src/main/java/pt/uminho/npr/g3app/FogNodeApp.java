@@ -64,11 +64,11 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem> imple
     public void onInteractionReceived(ApplicationInteraction interaction) {
         if (interaction instanceof RsuFogInteraction) {
             RsuFogInteraction rsuMsg = (RsuFogInteraction) interaction;
+            getLog().infoSimTime(this, "Received msg from " + rsuMsg.getSourceUnitId() + ": " + rsuMsg.getContent());
 
-            if (rsuMsg.getContent().contains("TO: fog_1")) {
-                getLog().infoSimTime(this, "Fog Node received targeted RsuFogInteraction: " + rsuMsg.getContent());
+            if (rsuMsg.getUnitId().equals(getOs().getId())) {
                 // send a responde back
-                RsuFogInteraction response = new RsuFogInteraction(getOs().getSimulationTime(), rsuMsg.getSenderId(), "Received by fog_1");
+                RsuFogInteraction response = new RsuFogInteraction(getOs().getSimulationTime(), rsuMsg.getSenderId(), "Received by server_0", getOs().getId());
                 getOs().sendInteractionToRti(response);
             } else {
                 getLog().infoSimTime(this, "Fog Node received RsuFogInteraction not targeted to this node: " + rsuMsg.getContent());
@@ -76,6 +76,28 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem> imple
         } else {
             getLog().infoSimTime(this, "Fog Node received unknown interaction type: " + interaction.toString());
         }
+    }
+
+    private List<String> getAssignedRsus() {
+        String fogId = getOs().getId();
+    
+        int fogIndex;
+        try {
+            fogIndex = Integer.parseInt(fogId.split("_")[1]);
+        } catch (Exception e) {
+            getLog().infoSimTime(this, "Invalid fog ID format: " + fogId);
+            return Collections.emptyList(); // fallback
+        }
+    
+        List<String> rsus = new ArrayList<>();
+        int start = fogIndex * 9;
+        int end = (fogIndex == 4) ? 44 : start + 9;
+    
+        for (int i = start; i < end; i++) {
+            rsus.add("rsu_" + i);
+        }
+    
+        return rsus;
     }
 
     @Override

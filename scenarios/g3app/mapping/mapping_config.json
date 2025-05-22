@@ -393,7 +393,7 @@
       "startingTime": "0.2 s",
       "targetFlow": 900,
       "maxNumberVehicles": 235,
-      "route": "r_0",
+      "route": "r_1",
       "LaneSelectionMode": "RANDOM",
       "types": [
         {

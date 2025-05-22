@@ -44,6 +44,42 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
         getLog().infoSimTime(this, "RSU App started!");
     }
 
+    public String getFogNode() {
+        float idValue = getIntId();
+    
+        if (idValue < 0 || idValue > 43) {
+            return "server_0"; // fallback
+        }
+    
+        if (idValue < 9) {
+            return "server_0";
+        } else if (idValue < 18) {
+            return "server_1";
+        } else if (idValue < 27) {
+            return "server_2";
+        } else if (idValue < 36) {
+            return "server_3";
+        } else {
+            return "server_4";
+        }
+    }
+    
+    
+
+    // int value
+    private int getIntId() {
+        String id = getOs().getId();
+        String[] parts = id.split("_");
+        if (parts.length > 1) {
+            try {
+                return Integer.parseInt(parts[1]);
+            } catch (NumberFormatException e) {
+                getLog().errorSimTime(this, "Invalid ID format: " + id);
+            }
+        }
+        return -1; // default value if parsing fails
+    }
+
     @Override
     public void onShutdown() {
         getLog().infoSimTime(this, "RSU App shutting down.");
@@ -55,12 +91,11 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
     
         if (msg instanceof VehInfoMsg) {
             String sender = ((VehInfoMsg) msg).getSenderName();
-            getLog().infoSimTime(this, "RSU: Received VehInfoMsg from " + sender);
+            getLog().infoSimTime(this, "RSU: Received VehInfoMsg from " + sender  + " sending it to Fog Node."); //mudar para o respetivo
     
-            RsuFogInteraction interaction = new RsuFogInteraction(getOs().getSimulationTime(), "fog_1", "TO: fog_1 | Forwarded VehInfoMsg from " + sender + " | " + msg.toString());
+            RsuFogInteraction interaction = new RsuFogInteraction(getOs().getSimulationTime(), getFogNode(), "Forwarded VehInfoMsg from " + sender + " | " + msg.toString(), getOs().getId());
     
             getOs().sendInteractionToRti(interaction);
-            getLog().infoSimTime(this, "RSU: Sent interaction to fog1: " + interaction.getContent());
         }
     }
     
