@@ -381,18 +381,7 @@
       "startingTime": "0.2 s",
       "endingTime": "950.0 s",
       "targetFlow": 1800,
-      "route": "r_0",
-      "LaneSelectionMode": "RANDOM",
-      "types": [
-        {
-          "name": "Car"
-        }
-      ]
-    },
-    {
-      "startingTime": "0.2 s",
-      "targetFlow": 900,
-      "maxNumberVehicles": 235,
+      "maxNumberVehicles": 300,
       "route": "r_0",
       "LaneSelectionMode": "RANDOM",
       "types": [

@@ -23,6 +23,10 @@ import org.eclipse.mosaic.lib.geo.GeoPoint;
 import org.eclipse.mosaic.lib.objects.v2x.V2xMessage;
 import org.eclipse.mosaic.lib.geo.MutableGeoPoint;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Iterator;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 
 public class VehApp extends AbstractApplication<VehicleOperatingSystem> implements VehicleApplication, CommunicationApplication
 {
@@ -44,6 +48,7 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
 
     @Override
     public void onShutdown() {
+        //writeNeighborsToCsv();
         getLog().infoSimTime(this, "onShutdown");
         getOs().getAdHocModule().disable();
     }
@@ -71,46 +76,61 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     }
 
     @Override
-    public void onMessageReceived(ReceivedV2xMessage arg0) {
+    public void onMessageReceived(@Nonnull ReceivedV2xMessage receivedMessage) {
         //getLog().infoSimTime(this, "onMessageReceived");
         //TODO: process received message
+        V2xMessage msg = receivedMessage.getMessage();
 
-        V2xMessage msg = arg0.getMessage();
-        if(msg instanceof VehInfoMsg){
+        if (msg instanceof VehInfoMsg) {
             VehInfoMsg vehInfoMsg = (VehInfoMsg) msg;
-            if(vehInfoMsg.getSenderName().equals(getOs().getId())) {
+
+            if (vehInfoMsg.getSenderName().equals(getOs().getId())) {
                 return;
             }
+
             updateNeighbors(vehInfoMsg);
         }
+
         // log neighbors table to output.csv (can be done in onShutdown())
     }
 
-    
-    public void updateNeighbors(VehInfoMsg vehInfoMsg){
+    public void updateNeighbors(VehInfoMsg vehInfoMsg) {
         String id = vehInfoMsg.getSenderName();
-        if(neighbors.containsKey(id)){
-            neighbors.replace(id, vehInfoMsg);  
-            neighborsTimestamps.replace(id, getOs().getSimulationTime());
-
-        }else{
-            neighbors.put(id, vehInfoMsg);
-            neighborsTimestamps.put(id, getOs().getSimulationTime());
-        }
         long currentTime = getOs().getSimulationTime();
-        
+    
+        neighbors.put(id, vehInfoMsg);
+        neighborsTimestamps.put(id, currentTime);
+    
+        removeOldNeighbors();
     }
 
     // Em vez que fazer os loops, podemos remover apenas quando precisamos de usar os neighbous e, se o timestamp for maior que o timeout, ignore e remove
-        public void removeOldNeighbors(){
+    public void removeOldNeighbors() {
         long currentTime = getOs().getSimulationTime();
-        for (Map.Entry<String, Long> entry : neighborsTimestamps.entrySet()) {
-            String id = entry.getKey();
+        Iterator<Map.Entry<String, Long>> iterator = neighborsTimestamps.entrySet().iterator();
+    
+        while (iterator.hasNext()) {
+            Map.Entry<String, Long> entry = iterator.next();
             long timestamp = entry.getValue();
+    
             if (currentTime - timestamp > NeighborTimeout) {
+                String id = entry.getKey();
+                iterator.remove();
                 neighbors.remove(id);
-                neighborsTimestamps.remove(id);
             }
+        }
+    }
+
+    private void writeNeighborsToCsv() {
+        String filename = "neighbors_" + getOs().getId() + ".csv"; // One file per RSU/vehicle
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            writer.println("NeighborID,LastSeenTime");
+            for (Map.Entry<String, Long> entry : neighborsTimestamps.entrySet()) {
+                writer.println(entry.getKey() + "," + entry.getValue());
+            }
+            getLog().infoSimTime(this, "Neighbors table written to: " + filename);
+        } catch (IOException e) {
+            getLog().warnSimTime(this, "Error writing neighbors CSV: " + e.getMessage());
         }
     }
 

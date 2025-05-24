@@ -64,7 +64,7 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem> imple
     public void onInteractionReceived(ApplicationInteraction interaction) {
         if (interaction instanceof RsuFogInteraction) {
             RsuFogInteraction rsuMsg = (RsuFogInteraction) interaction;
-            getLog().infoSimTime(this, "Received msg from " + rsuMsg.getSourceUnitId() + ": " + rsuMsg.getContent());
+            //getLog().infoSimTime(this, "Received msg from " + rsuMsg.getSourceUnitId() + ": " + rsuMsg.getContent());
 
             if (rsuMsg.getUnitId().equals(getOs().getId())) {
                 // send a responde back
@@ -78,7 +78,7 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem> imple
         }
     }
 
-    private List<String> getAssignedRsus() {
+    /*private List<String> getAssignedRsus() {
         String fogId = getOs().getId();
     
         int fogIndex;
@@ -98,7 +98,7 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem> imple
         }
     
         return rsus;
-    }
+    }*/
 
     @Override
     public void onSumoTraciResponded(SumoTraciResult sumoTraciResult) {

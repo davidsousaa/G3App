@@ -20,12 +20,22 @@ import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.Ce
 import org.eclipse.mosaic.interactions.application.ApplicationInteraction;
 import org.eclipse.mosaic.fed.application.app.api.MosaicApplication;
 import org.eclipse.mosaic.lib.objects.traffic.SumoTraciResult;
-
-
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import org.eclipse.mosaic.rti.TIME;
 
 
 public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSystem>
         implements CommunicationApplication, MosaicApplication {
+
+    private final Map<String, VehInfoMsg> neighbors = new HashMap<>();
+    private final Map<String, Long> neighborsTimestamps = new HashMap<>();
+    private static final long NeighborTimeout = 500 * TIME.MILLI_SECOND;
+            
 
     @Override
     public void onStartup() {
@@ -74,7 +84,7 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
             try {
                 return Integer.parseInt(parts[1]);
             } catch (NumberFormatException e) {
-                getLog().errorSimTime(this, "Invalid ID format: " + id);
+                getLog().warnSimTime(this, "Invalid ID format: " + id);
             }
         }
         return -1; // default value if parsing fails
@@ -83,22 +93,69 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
     @Override
     public void onShutdown() {
         getLog().infoSimTime(this, "RSU App shutting down.");
+        //saveNeighborsToFile();
     }
+    
+    private void saveNeighborsToFile() {
+        String id = getOs().getId();
+        String fileName = "logs/neighbors_" + id + ".csv";
+    
+        try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
+            writer.println("NeighborID,LastSeenTime");
+            for (Map.Entry<String, Long> entry : neighborsTimestamps.entrySet()) {
+                writer.println(entry.getKey() + "," + entry.getValue());
+            }
+        } catch (IOException e) {
+            getLog().warnSimTime(this, "Failed to write neighbors file: " + e.getMessage());
+        }
+    }
+    
 
     @Override
     public void onMessageReceived(@Nonnull ReceivedV2xMessage receivedMessage) {
         V2xMessage msg = receivedMessage.getMessage();
     
         if (msg instanceof VehInfoMsg) {
-            String sender = ((VehInfoMsg) msg).getSenderName();
-            getLog().infoSimTime(this, "RSU: Received VehInfoMsg from " + sender  + " sending it to Fog Node."); //mudar para o respetivo
-    
-            RsuFogInteraction interaction = new RsuFogInteraction(getOs().getSimulationTime(), getFogNode(), "Forwarded VehInfoMsg from " + sender + " | " + msg.toString(), getOs().getId());
-    
+            VehInfoMsg vehMsg = (VehInfoMsg) msg;
+            if (!vehMsg.getSenderName().equals(getOs().getId())) {
+                updateNeighbors(vehMsg);
+            }
+        
+            String sender = vehMsg.getSenderName();
+            getLog().infoSimTime(this, "RSU: Received VehInfoMsg from " + sender  + " sending it to Fog Node.");
+            RsuFogInteraction interaction = new RsuFogInteraction(
+                getOs().getSimulationTime(), getFogNode(),
+                "Forwarded VehInfoMsg from " + sender + " | " + msg.toString(),
+                getOs().getId()
+            );
             getOs().sendInteractionToRti(interaction);
         }
     }
+
+    public void updateNeighbors(VehInfoMsg vehInfoMsg){
+        String id = vehInfoMsg.getSenderName();
+        long currentTime = getOs().getSimulationTime();
     
+        neighbors.put(id, vehInfoMsg);
+        neighborsTimestamps.put(id, currentTime);
+    
+        removeOldNeighbors();
+    }
+
+    public void removeOldNeighbors(){
+        long currentTime = getOs().getSimulationTime();
+        Iterator<Map.Entry<String, Long>> iterator = neighborsTimestamps.entrySet().iterator();
+    
+        while (iterator.hasNext()) {
+            Map.Entry<String, Long> entry = iterator.next();
+            long timestamp = entry.getValue();
+            if (currentTime - timestamp > NeighborTimeout) {
+                String id = entry.getKey();
+                iterator.remove();
+                neighbors.remove(id);
+            }
+        }
+    }
 
     @Override
     public void onMessageTransmitted(V2xMessageTransmission arg0) {
