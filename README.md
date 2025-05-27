@@ -2,6 +2,8 @@
 
 ## Setup
 
+Note: Check if the cp command works with relative paths in your environment.
+
 1. Copy `g3app` scenario to mosaic's scenarios folder
 
     $ `cp -r g3app <mosaic-path>/scenarios/g3app`
