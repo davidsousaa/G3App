@@ -47,6 +47,7 @@ public class VehInfoMsg extends V2xMessage {
         this.senderHeading = heading;
         this.senderSpeed = speed;
         this.senderLaneId = laneId;
+        this.destination = destination;
         try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 final DataOutputStream dos = new DataOutputStream(baos)) {
             dos.writeLong(timeStamp);
@@ -55,6 +56,7 @@ public class VehInfoMsg extends V2xMessage {
             dos.writeDouble(senderHeading);
             dos.writeDouble(senderSpeed);
             dos.writeInt(senderLaneId);
+            dos.writeUTF(destination);
 
             payload = new EncodedPayload(baos.toByteArray(), baos.size());
         } catch (IOException e) {
@@ -90,6 +92,10 @@ public class VehInfoMsg extends V2xMessage {
 
     public int getLaneId() {
         return senderLaneId;
+    }
+
+    public String getDestination() {
+        return destination;
     }
 
     @Override

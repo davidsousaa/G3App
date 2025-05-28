@@ -43,6 +43,7 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
 
     private Map<String, VehInfoMsg> neighbors = new ConcurrentHashMap<>();
     private Map<String, Long> neighborsTimestamps = new ConcurrentHashMap<>();
+    private Map<String, long> neighborsRSU = new ConcurrentHashMap<>();
     private final Long NeighborTimeout = 500 * TIME.MILLI_SECOND;
     private GeoPoint rsuPos = new MutableGeoPoint(0.0, 0.0);
 
