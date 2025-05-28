@@ -6,7 +6,6 @@ import java.io.IOException;
 
 import javax.annotation.Nonnull;
 
-
 import org.eclipse.mosaic.lib.geo.GeoPoint;
 import org.eclipse.mosaic.lib.objects.v2x.EncodedPayload;
 import org.eclipse.mosaic.lib.objects.v2x.MessageRouting;
@@ -22,9 +21,8 @@ import org.eclipse.mosaic.lib.util.SerializationUtils;
  * sender lane
  */
 
-
 public class VehInfoMsg extends V2xMessage {
-    
+
     private final EncodedPayload payload;
     private final long timeStamp;
     private final String senderName;
@@ -33,15 +31,14 @@ public class VehInfoMsg extends V2xMessage {
     private final double senderSpeed;
     private final int senderLaneId;
 
-
     public VehInfoMsg(
-        final MessageRouting routing,
-        final long time,
-        final String name,
-        final GeoPoint pos,
-        final double heading,
-        final double speed,
-        final int laneId) {
+            final MessageRouting routing,
+            final long time,
+            final String name,
+            final GeoPoint pos,
+            final double heading,
+            final double speed,
+            final int laneId) {
 
         super(routing);
         this.timeStamp = time;
@@ -51,7 +48,7 @@ public class VehInfoMsg extends V2xMessage {
         this.senderSpeed = speed;
         this.senderLaneId = laneId;
         try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-             final DataOutputStream dos = new DataOutputStream(baos)) {
+                final DataOutputStream dos = new DataOutputStream(baos)) {
             dos.writeLong(timeStamp);
             dos.writeUTF(senderName);
             SerializationUtils.encodeGeoPoint(dos, senderPos);
@@ -74,6 +71,7 @@ public class VehInfoMsg extends V2xMessage {
     public long getTimeStamp() {
         return timeStamp;
     }
+
     public String getSenderName() {
         return senderName;
     }
@@ -81,7 +79,7 @@ public class VehInfoMsg extends V2xMessage {
     public GeoPoint getSenderPosition() {
         return senderPos;
     }
-    
+
     public double getHeading() {
         return senderHeading;
     }
@@ -96,12 +94,12 @@ public class VehInfoMsg extends V2xMessage {
 
     @Override
     public String toString() {
-        return "VehInfoMessage{" + 
-            "timeStamp=" + timeStamp + 
-            ", senderName=" + senderName + 
-            ", senderPosition=" + senderPos + 
-            ", senderHeading=" + senderHeading + 
-            ", senderSpeed=" + senderSpeed + 
-            ", senderLaneId=" + senderLaneId +'}';
+        return "VehInfoMessage{" +
+                "timeStamp=" + timeStamp +
+                ", senderName=" + senderName +
+                ", senderPosition=" + senderPos +
+                ", senderHeading=" + senderHeading +
+                ", senderSpeed=" + senderSpeed +
+                ", senderLaneId=" + senderLaneId + '}';
     }
 }
