@@ -1,6 +1,7 @@
 package pt.uminho.npr.g3app;
 
 import javax.annotation.Nonnull;
+import pt.uminho.npr.g3app.RSUHello;
 
 import org.eclipse.mosaic.fed.application.app.AbstractApplication;
 import org.eclipse.mosaic.fed.application.app.api.CommunicationApplication;
@@ -27,6 +28,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import org.eclipse.mosaic.rti.TIME;
+import org.eclipse.mosaic.lib.geo.GeoPoint;
 
 
 public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSystem>
@@ -157,6 +159,24 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
         }
     }
 
+    private void sendHelloMessage() {
+        getOs().getEventManager().addEvent(getOs().getSimulationTime() + 1000 * TIME.MILLI_SECOND, this);
+        long currentTime = getOs().getSimulationTime();
+        GeoPoint pos = getOs().getPosition();
+    
+        MessageRouting routing = getOs().getAdHocModule().createMessageRouting().viaChannel(AdHocChannel.CCH).topoBroadCast();
+
+        RSUHello helloMsg = new RSUHello(
+            routing,
+            getOs().getId(),
+            pos,
+            currentTime
+        );
+    
+        getOs().getAdHocModule().sendV2xMessage(helloMsg);
+        getLog().infoSimTime(this, "Sent RSUHello message: " + helloMsg.toString());
+    }
+
     @Override
     public void onMessageTransmitted(V2xMessageTransmission arg0) {
         getLog().infoSimTime(this, "RSU: Message transmitted.");
@@ -169,8 +189,9 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
 
     @Override
     public void processEvent(Event event) {
-        // No periodic logic for now, but required to implement
+        sendHelloMessage();
     }
+    
 
     @Override
     public void onAcknowledgementReceived(ReceivedAcknowledgement arg0) {

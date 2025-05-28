@@ -15,6 +15,7 @@ import org.eclipse.mosaic.interactions.communication.V2xMessageTransmission;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.CamBuilder;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.ReceivedV2xMessage;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.CellModuleConfiguration;
+import org.eclipse.mosaic.rti.TIME;
 
 public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
         implements CommunicationApplication, MosaicApplication {
@@ -28,7 +29,6 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
                 .maxUplinkBitrate(50 * DATA.MEGABIT));
 
         getLog().infoSimTime(this, "Fog Node started and ready to receive RSU interactions.");
-        getOs().getEventManager().scheduledIn(1_000, "laneInfoCleanup");
     }
 
     @Override
@@ -38,14 +38,11 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
 
     @Override
     public void processEvent(Event event) {
-        if ("laneInfoCleanup".equals(event.getTag())) {
-            cleanupLaneInfo();
-
-            getOs().getEventManager().scheduleIn(1_000, "laneInfoCleanup");
-        }
+        cleanupLaneInfo();
     }
 
     public void cleanupLaneInfo() {
+        getOs().getEventManager().addEvent(getOs().getSimulationTime() + 1000 * TIME.MILLI_SECOND, this);
         long currentTime = getOs().getSimulationTime();
 
         for (ConcurrentHashMap.Entry<String, ConcurrentHashMap<String, Long>> entry : laneOccupation.entrySet()) {
