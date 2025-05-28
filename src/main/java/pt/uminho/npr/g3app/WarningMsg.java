@@ -15,57 +15,47 @@ import org.eclipse.mosaic.lib.util.SerializationUtils;
 
 /*
  * timestamp
- * sendeID
+ * senderID
  * sender position
- * sender heading
- * sender speed
- * sender lane
+ * receiverID
+ * warning
  */
 
 
-public class VehInfoMsg extends V2xMessage {
+public class WarningMsg extends V2xMessage {
     
     private final EncodedPayload payload;
     private final long timeStamp;
     private final String senderName;
     private final GeoPoint senderPos;
-    private final double senderHeading;
-    private final double senderSpeed;
-    private final int senderLaneId;
-    private static final String destination;
+    private final String receiverName;
+    private final String warningMessage;
 
 
-    public VehInfoMsg(
+    public WarningMsg(
         final MessageRouting routing,
         final long time,
-        final String name,
+        final String senderName,
         final GeoPoint pos,
-        final double heading,
-        final double speed,
-        final int laneId,
-        final String destination) {
+        final String receiverName,
+        final String warningMessage) {
 
         super(routing);
         this.timeStamp = time;
-        this.senderName = name;
+        this.senderName = senderName;
         this.senderPos = pos;
-        this.senderHeading = heading;
-        this.senderSpeed = speed;
-        this.senderLaneId = laneId;
-        this.destination = destination;
+        this.receiverName = receiverName;
+        this.warningMessage = warningMessage;
         try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
              final DataOutputStream dos = new DataOutputStream(baos)) {
             dos.writeLong(timeStamp);
             dos.writeUTF(senderName);
             SerializationUtils.encodeGeoPoint(dos, senderPos);
-            dos.writeDouble(senderHeading);
-            dos.writeDouble(senderSpeed);
-            dos.writeInt(senderLaneId);
-            dos.writeUTF(destination);
-
-            payload = new EncodedPayload(baos.toByteArray(), baos.size());
+            dos.writeUTF(receiverName);
+            dos.writeUTF(warningMessage);
+            this.payload = EncodedPayload.of(baos.toByteArray());
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error creating WarningMsg payload", e);
         }
     }
 
@@ -86,30 +76,22 @@ public class VehInfoMsg extends V2xMessage {
         return senderPos;
     }
     
-    public double getHeading() {
-        return senderHeading;
+    public String getReceiverName() {
+        return receiverName;
     }
 
-    public double getSpeed() {
-        return senderSpeed;
-    }
-
-    public int getLaneId() {
-        return senderLaneId;
-    }
-
-    public String getDestination() {
-        return destination;
+    public String getWarningMessage() {
+        return warningMessage;
     }
 
     @Override
     public String toString() {
-        return "VehInfoMessage{" + 
-            "timeStamp=" + timeStamp + 
-            ", senderName=" + senderName + 
-            ", senderPosition=" + senderPos + 
-            ", senderHeading=" + senderHeading + 
-            ", senderSpeed=" + senderSpeed + 
-            ", senderLaneId=" + senderLaneId +'}';
+        return "WarningMessage{" +
+                "timeStamp=" + timeStamp +
+                ", senderName='" + senderName + '\'' +
+                ", senderPos=" + senderPos +
+                ", receiverName='" + receiverName + '\'' +
+                ", warningMessage='" + warningMessage + '\'' +
+                '}';
     }
 }

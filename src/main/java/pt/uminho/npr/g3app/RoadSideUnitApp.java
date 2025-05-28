@@ -52,6 +52,7 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
             .maxUplinkBitrate(50 * DATA.MEGABIT));
 
         getLog().infoSimTime(this, "RSU App started!");
+        getOs().getEventManager().scheduleIn(1_000, "sendHello");
     }
 
     public String getFogNode() {
@@ -157,6 +158,23 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
         }
     }
 
+    private void sendHelloMessage() {
+        long currentTime = getOs().getSimulationTime();
+        GeoPoint pos = getOs().getPosition();
+    
+        MessageRouting routing = getOs().getAdHocModule().createMessageRouting().viaChannel(AdHocChannel.CCH).topoBroadCast();
+
+        RSUHello helloMsg = new RSUHello(
+            routing,
+            getOs().getId(),
+            pos,
+            currentTime
+        );
+    
+        getOs().getAdHocModule().sendV2xMessage(helloMsg);
+        getLog().infoSimTime(this, "Sent RSUHello message: " + helloMsg.toString());
+    }
+
     @Override
     public void onMessageTransmitted(V2xMessageTransmission arg0) {
         getLog().infoSimTime(this, "RSU: Message transmitted.");
@@ -169,8 +187,13 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
 
     @Override
     public void processEvent(Event event) {
-        // No periodic logic for now, but required to implement
+        if ("sendHello".equals(event.getTag())) {
+            sendHelloMessage();
+    
+            getOs().getEventManager().scheduleIn(1_000, "sendHello");
+        }
     }
+    
 
     @Override
     public void onAcknowledgementReceived(ReceivedAcknowledgement arg0) {
