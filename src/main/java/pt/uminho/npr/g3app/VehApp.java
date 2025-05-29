@@ -231,6 +231,7 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     public String getBestNeighbor() {
         removeOldNeighbors();
         String bestNeighbor = null;
+        double bestDistance = 0.0;
 
         for (Map.Entry<String, VehInfoMsg> entry : neighbors.entrySet()) {
             String neighborId = entry.getKey();
@@ -238,7 +239,6 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
             GeoPoint neighborPos = neighborMsg.getSenderPosition();
             double neighborHeading = neighborMsg.getHeading();
             GeoPoint rsuPos = neighborsRSU.entrySet().iterator().next().getValue().getSenderPos();
-            double bestDistance = 0.0;
 
             if (neighborId.equals(getOs().getId())) {
                 continue;
@@ -249,7 +249,7 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
             if (bestNeighbor == null || distance < bestDistance) {
                 bestNeighbor = neighborId;
                 bestDistance = distance;
-            } else if (bestNeighbor != null && distance == bestDistance) {
+            } else if (distance == bestDistance) {
                 bestNeighbor = neighborId;
             }
         }
