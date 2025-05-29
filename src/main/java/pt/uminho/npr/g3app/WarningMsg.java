@@ -53,7 +53,7 @@ public class WarningMsg extends V2xMessage {
             SerializationUtils.encodeGeoPoint(dos, senderPos);
             dos.writeUTF(receiverName);
             dos.writeUTF(warningMessage);
-            this.payload = EncodedPayload.of(baos.toByteArray());
+            payload = new EncodedPayload(baos.toByteArray(), baos.size());
         } catch (IOException e) {
             throw new RuntimeException("Error creating WarningMsg payload", e);
         }

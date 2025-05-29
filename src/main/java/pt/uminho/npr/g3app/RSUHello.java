@@ -43,7 +43,7 @@ public class RSUHello extends V2xMessage {
             dos.writeLong(timeStamp);
             dos.writeUTF(senderName);
             SerializationUtils.encodeGeoPoint(dos, senderPos);
-            this.payload = EncodedPayload.of(baos.toByteArray());
+            payload = new EncodedPayload(baos.toByteArray(), baos.size());
         } catch (IOException e) {
             throw new RuntimeException("Error creating RSUHello payload", e);
         }

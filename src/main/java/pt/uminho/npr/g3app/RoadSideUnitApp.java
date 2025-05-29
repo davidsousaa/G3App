@@ -27,6 +27,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import org.eclipse.mosaic.rti.TIME;
+import org.eclipse.mosaic.lib.geo.GeoPoint;
 
 
 public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSystem>
@@ -52,7 +53,6 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
             .maxUplinkBitrate(50 * DATA.MEGABIT));
 
         getLog().infoSimTime(this, "RSU App started!");
-        getOs().getEventManager().scheduleIn(1_000, "sendHello");
     }
 
     public String getFogNode() {
@@ -159,6 +159,7 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
     }
 
     private void sendHelloMessage() {
+        getOs().getEventManager().addEvent(getOs().getSimulationTime() + 1000 * TIME.MILLI_SECOND, this);
         long currentTime = getOs().getSimulationTime();
         GeoPoint pos = getOs().getPosition();
     
@@ -187,11 +188,7 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
 
     @Override
     public void processEvent(Event event) {
-        if ("sendHello".equals(event.getTag())) {
-            sendHelloMessage();
-    
-            getOs().getEventManager().scheduleIn(1_000, "sendHello");
-        }
+        sendHelloMessage();
     }
     
 
