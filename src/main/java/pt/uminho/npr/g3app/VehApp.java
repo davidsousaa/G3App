@@ -42,7 +42,8 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
 
     private Map<String, VehInfoMsg> neighbors = new ConcurrentHashMap<>();
     private Map<String, Long> neighborsTimestamps = new ConcurrentHashMap<>();
-    private Map<String, Long> neighborsRSU = new ConcurrentHashMap<>();
+    private Map<String, Long> neighborsRSUTimestamps = new ConcurrentHashMap<>();
+    private Map<String, RSUHello> neighborsRSU = new ConcurrentHashMap<>();
     private final Long NeighborTimeout = 500 * TIME.MILLI_SECOND;
     private final Long RSUTimeout = 800 * TIME.MILLI_SECOND;
     private GeoPoint rsuPos = new MutableGeoPoint(0.0, 0.0);
@@ -81,6 +82,7 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     public void onMessageReceived(@Nonnull ReceivedV2xMessage receivedMessage) {
         //getLog().infoSimTime(this, "onMessageReceived");
         //TODO: process received message
+        //Já tem timestamps e info do RSU updated, agora é verificar a pos
         V2xMessage msg = receivedMessage.getMessage();
 
         if (msg instanceof VehInfoMsg vehInfoMsg) {
@@ -91,19 +93,32 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
             updateNeighbors(vehInfoMsg);
 
         } else if (msg instanceof RSUHello rsuHello) {
-            String rsuId = rsuHello.getSenderName();
-            long currentTime = getOs().getSimulationTime();
 
-            neighborsRSU.put(rsuId, currentTime);
-            rsuPos = rsuHello.getSenderPos();
+            updateRSUNeighbors(rsuHello);
 
             if (getOs().getId().equals("veh_5")) {
-                getLog().infoSimTime(this, "Received RSUHello from " + rsuId + " at position " + rsuPos);
-                getLog().infoSimTime(this, "RSU connected: " + neighborsRSU.keySet().toString());
+                getLog().infoSimTime(this, "Received RSUHello from " + rsuHello.getSenderName());
+                getLog().infoSimTime(this, "RSU connected: " + neighborsRSUTimestamps.keySet().toString());
             }
         }
 
         // log neighbors table to output.csv (can be done in onShutdown())
+    }
+
+    public void updateRSUNeighbors(RSUHello vehInfoMsg) {
+        String id = vehInfoMsg.getSenderName();
+        long currentTime = getOs().getSimulationTime();
+
+        neighborsRSU.put(id, vehInfoMsg);
+        neighborsTimestamps.put(id, currentTime);
+
+        removeOldNeighbors();
+    }
+
+    public void forwardMessage() {
+        if (this.isRSUConnected()) {
+
+        }
     }
 
     public void updateNeighbors(VehInfoMsg vehInfoMsg) {
@@ -175,14 +190,15 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
 
     private void removeOldRSUs() {
         long currentTime = getOs().getSimulationTime();
-        Iterator<Map.Entry<String, Long>> iterator = neighborsRSU.entrySet().iterator();
+        Iterator<Map.Entry<String, Long>> iterator = neighborsRSUTimestamps.entrySet().iterator();
 
         while (iterator.hasNext()) {
             Map.Entry<String, Long> entry = iterator.next();
             long timestamp = entry.getValue();
 
-            if (currentTime - timestamp > RSUTimeout && neighborsRSU.size() > 1) {
+            if (currentTime - timestamp > RSUTimeout && neighborsRSUTimestamps.size() > 1) {
                 iterator.remove();
+                neighborsRSU.remove(entry.getKey());
             }
         }
     }
@@ -190,8 +206,8 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     private String getRSU() {
         removeOldRSUs();
 
-        if (!neighborsRSU.isEmpty()) {
-            for (String rsuId : neighborsRSU.keySet()) {
+        if (!neighborsRSUTimestamps.isEmpty()) {
+            for (String rsuId : neighborsRSUTimestamps.keySet()) {
                 return rsuId;
             }
         }
@@ -202,7 +218,7 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     private boolean isRSUConnected() {
         removeOldRSUs();
         long currentTime = getOs().getSimulationTime();
-        for (Map.Entry<String, Long> entry : neighborsRSU.entrySet()) {
+        for (Map.Entry<String, Long> entry : neighborsRSUTimestamps.entrySet()) {
             long timestamp = entry.getValue();
 
             if (currentTime - timestamp > RSUTimeout) {
@@ -212,16 +228,70 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         return true;
     }
 
+    public String getBestNeighbor() {
+        removeOldNeighbors();
+        String bestNeighbor = null;
+
+        for (Map.Entry<String, VehInfoMsg> entry : neighbors.entrySet()) {
+            String neighborId = entry.getKey();
+            VehInfoMsg neighborMsg = entry.getValue();
+            GeoPoint neighborPos = neighborMsg.getSenderPosition();
+            double neighborHeading = neighborMsg.getHeading();
+            GeoPoint rsuPos = neighborsRSU.entrySet().iterator().next().getValue().getSenderPos();
+            double bestDistance = 0.0;
+
+            if (neighborId.equals(getOs().getId())) {
+                continue;
+            }
+
+            double distance = calculateDistance(rsuPos.getLatitude(), rsuPos.getLongitude(), neighborPos.getLatitude(), neighborPos.getLongitude());
+
+            if (bestNeighbor == null || distance < bestDistance) {
+                bestNeighbor = neighborId;
+                bestDistance = distance;
+            } else if (bestNeighbor != null && distance == bestDistance) {
+                bestNeighbor = neighborId;
+            }
+        }
+
+        return bestNeighbor;
+    }
+
+    public static double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+        final int R = 6371000;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
     private void sendVehInfoMsg() {
         MessageRouting routing = getOs().getAdHocModule().createMessageRouting().viaChannel(AdHocChannel.CCH).topoBroadCast();
         long time = getOs().getSimulationTime();
         String rsu = this.getRSU();
+        VehInfoMsg message = null;
         if (rsu == null) {
             rsu = "rsu_0";
         }
         boolean isRsuConnected = isRSUConnected();
-        VehInfoMsg message = new VehInfoMsg(routing, time, getOs().getId(), getOs().getPosition(), this.vehHeading, this.vehSpeed, this.vehLane, rsu, isRsuConnected);
-        getOs().getAdHocModule().sendV2xMessage(message);
+
+        if (isRsuConnected) {
+            message = new VehInfoMsg(routing, time, getOs().getId(), getOs().getPosition(), this.vehHeading, this.vehSpeed, this.vehLane, rsu, isRsuConnected);
+
+            getOs().getAdHocModule().sendV2xMessage(message);
+        } else {
+            String bestNeighbor = getBestNeighbor();
+            if (bestNeighbor != null) {
+                message = new VehInfoMsg(routing, time, getOs().getId(), getOs().getPosition(), this.vehHeading, this.vehSpeed, this.vehLane, bestNeighbor, isRsuConnected);
+                getOs().getAdHocModule().sendV2xMessage(message);
+            } else {
+                getLog().warnSimTime(this, "No suitable neighbor found to forward the message.");
+            }
+        }
+
         getLog().infoSimTime(this, "Sent VehInfoMsg: " + message.toString());
     }
 }

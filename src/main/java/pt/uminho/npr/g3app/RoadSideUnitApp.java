@@ -194,8 +194,7 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
     @Override
     public void onInteractionReceived(ApplicationInteraction interaction) {
         getLog().infoSimTime(this, "RSU: Received interaction: " + interaction.toString());
-        if (interaction instanceof RsuFogInteraction) {
-            RsuFogInteraction rsuMsg = (RsuFogInteraction) interaction;
+        if (interaction instanceof RsuFogInteraction rsuMsg) {
             getLog().infoSimTime(this, "RSU: Received RsuFogInteraction: " + rsuMsg.getContent());
         } else {
             getLog().infoSimTime(this, "RSU: Received unknown interaction type: " + interaction.toString());
