@@ -26,352 +26,48 @@
     {
       "name": "RSU",
       "position": {
-        "latitude": 41.558405,
-        "longitude": -8.397884
+        "latitude": 41.557291,
+        "longitude": -8.398113
       },
       "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
     },
     {
       "name": "RSU",
       "position": {
-        "latitude": 41.558237,
-        "longitude": -8.398135
+        "latitude": 41.554538,
+        "longitude": -8.400764
       },
       "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
     },
     {
       "name": "RSU",
       "position": {
-        "latitude": 41.557988,
-        "longitude": -8.397984
+        "latitude": 41.553068,
+        "longitude": -8.404874
       },
       "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
     },
     {
       "name": "RSU",
       "position": {
-        "latitude": 41.557742,
-        "longitude": -8.397879
+        "latitude": 41.551206,
+        "longitude": -8.408784
       },
       "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
     },
     {
       "name": "RSU",
       "position": {
-        "latitude": 41.557408,
-        "longitude": -8.397864
+        "latitude": 41.552517,
+        "longitude": -8.412355
       },
       "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
     },
     {
       "name": "RSU",
       "position": {
-        "latitude": 41.557077,
-        "longitude": -8.397860
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.556707,
-        "longitude": -8.398001
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.556438,
-        "longitude": -8.398282
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.556194,
-        "longitude": -8.398810
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.555961,
-        "longitude": -8.399355
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.555731,
-        "longitude": -8.399876
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.555391,
-        "longitude": -8.400662
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.555082,
-        "longitude": -8.401472
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.554726,
-        "longitude": -8.402315
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.554286,
-        "longitude": -8.403247
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.553931,
-        "longitude": -8.404139
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.553651,
-        "longitude": -8.404861
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.553392,
-        "longitude": -8.405424
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.553156,
-        "longitude": -8.406015
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.553000,
-        "longitude": -8.406626
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.552743,
-        "longitude": -8.407069
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.552508,
-        "longitude": -8.407646
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.552093,
-        "longitude": -8.408465
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.551847,
-        "longitude": -8.409017
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.551635,
-        "longitude": -8.409548
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.551426,
-        "longitude": -8.410097
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.551155,
-        "longitude": -8.410864
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.551366,
-        "longitude": -8.411367
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.551792,
-        "longitude": -8.411183
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.552022,
-        "longitude": -8.410606
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.552383,
-        "longitude": -8.410250
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.552906,
-        "longitude": -8.410351
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.553313,
-        "longitude": -8.409797
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.553607,
-        "longitude": -8.409227
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.553918,
-        "longitude": -8.408385
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.554310,
-        "longitude": -8.407898
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.554682,
-        "longitude": -8.407969
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.554547,
-        "longitude": -8.408675
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.554329,
-        "longitude": -8.409548
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.553870,
-        "longitude": -8.410318
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.553460,
-        "longitude": -8.410978
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.553145,
-        "longitude": -8.411569
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.552718,
-        "longitude": -8.411975
-      },
-      "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
-    },
-    {
-      "name": "RSU",
-      "position": {
-        "latitude": 41.552272,
-        "longitude": -8.411842
+        "latitude": 41.554678,
+        "longitude": -8.409186
       },
       "applications": ["pt.uminho.npr.g3app.RoadSideUnitApp"]
     }

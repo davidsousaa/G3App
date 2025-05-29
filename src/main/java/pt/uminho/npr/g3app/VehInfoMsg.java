@@ -20,7 +20,6 @@ import org.eclipse.mosaic.lib.util.SerializationUtils;
  * sender speed
  * sender lane
  */
-
 public class VehInfoMsg extends V2xMessage {
 
     private final EncodedPayload payload;
@@ -30,15 +29,17 @@ public class VehInfoMsg extends V2xMessage {
     private final double senderHeading;
     private final double senderSpeed;
     private final int senderLaneId;
+    private final String destination;
 
     public VehInfoMsg(
-        final MessageRouting routing,
-        final long time,
-        final String name,
-        final GeoPoint pos,
-        final double heading,
-        final double speed,
-        final int laneId) {
+            final MessageRouting routing,
+            final long time,
+            final String name,
+            final GeoPoint pos,
+            final double heading,
+            final double speed,
+            final int laneId,
+            final String destination) {
 
         super(routing);
         this.timeStamp = time;
@@ -47,15 +48,15 @@ public class VehInfoMsg extends V2xMessage {
         this.senderHeading = heading;
         this.senderSpeed = speed;
         this.senderLaneId = laneId;
-        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                final DataOutputStream dos = new DataOutputStream(baos)) {
+        this.destination = destination;
+        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream(); final DataOutputStream dos = new DataOutputStream(baos)) {
             dos.writeLong(timeStamp);
             dos.writeUTF(senderName);
             SerializationUtils.encodeGeoPoint(dos, senderPos);
             dos.writeDouble(senderHeading);
             dos.writeDouble(senderSpeed);
             dos.writeInt(senderLaneId);
-
+            dos.writeUTF(destination);
             payload = new EncodedPayload(baos.toByteArray(), baos.size());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -92,14 +93,20 @@ public class VehInfoMsg extends V2xMessage {
         return senderLaneId;
     }
 
+    public String getDestination() {
+        return destination;
+    }
+
     @Override
     public String toString() {
-        return "VehInfoMessage{" +
-                "timeStamp=" + timeStamp +
-                ", senderName=" + senderName +
-                ", senderPosition=" + senderPos +
-                ", senderHeading=" + senderHeading +
-                ", senderSpeed=" + senderSpeed +
-                ", senderLaneId=" + senderLaneId + '}';
+        return "VehInfoMsg{"
+                + "timeStamp=" + timeStamp
+                + ", senderName='" + senderName + '\''
+                + ", senderPos=" + senderPos
+                + ", senderHeading=" + senderHeading
+                + ", senderSpeed=" + senderSpeed
+                + ", senderLaneId=" + senderLaneId
+                + ", destination='" + destination + '\''
+                + '}';
     }
 }

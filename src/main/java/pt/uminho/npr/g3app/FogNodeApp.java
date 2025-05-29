@@ -1,6 +1,5 @@
 package pt.uminho.npr.g3app;
 
-import java.util.List;
 import javax.annotation.Nonnull;
 import org.eclipse.mosaic.rti.DATA;
 import org.eclipse.mosaic.rti.TIME;
@@ -130,7 +129,7 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
                 if (currentLaneId.equals(laneId)) {
                     vehiclesInLane.put(vehicleId, timestamp);
                     return; // No need to check if it is in another lane, it would be caught before when
-                            // added to this new lane
+                    // added to this new lane
                 } else {
                     // Vehicle registered in a different lane
                     vehiclesInLane.remove(vehicleId);
@@ -172,7 +171,6 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
      * return rsus;
      * }
      */
-
     @Override
     public void onSumoTraciResponded(SumoTraciResult sumoTraciResult) {
         // Not used in this example
