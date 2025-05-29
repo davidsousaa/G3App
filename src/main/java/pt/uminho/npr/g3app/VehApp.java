@@ -82,7 +82,6 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     public void onMessageReceived(@Nonnull ReceivedV2xMessage receivedMessage) {
         //getLog().infoSimTime(this, "onMessageReceived");
         //TODO: process received message
-        //Já tem timestamps e info do RSU updated, agora é verificar a pos
         V2xMessage msg = receivedMessage.getMessage();
 
         if (msg instanceof VehInfoMsg vehInfoMsg) {
@@ -92,6 +91,7 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
             }
             updateNeighbors(vehInfoMsg);
 
+            //se a flag rsuconnected for true, dar drop. Se for false e for o melhor vizinho, dar forward para o RSU. Senão, esperar pelo timeout, se não receber uma mensagem igual a uma que tenha no buffer, enviar ele para o melhor neighbor. Falta criar função semelhante à sendVehInfoMsg para dar o forward, ou incorporar isso aqui
         } else if (msg instanceof RSUHello rsuHello) {
 
             updateRSUNeighbors(rsuHello);
@@ -231,13 +231,12 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     public String getBestNeighbor() {
         removeOldNeighbors();
         String bestNeighbor = null;
-        double bestDistance = 0.0;
+        double bestDistance = Double.MAX_VALUE;
 
         for (Map.Entry<String, VehInfoMsg> entry : neighbors.entrySet()) {
             String neighborId = entry.getKey();
             VehInfoMsg neighborMsg = entry.getValue();
             GeoPoint neighborPos = neighborMsg.getSenderPosition();
-            double neighborHeading = neighborMsg.getHeading();
             GeoPoint rsuPos = neighborsRSU.entrySet().iterator().next().getValue().getSenderPos();
 
             if (neighborId.equals(getOs().getId())) {
