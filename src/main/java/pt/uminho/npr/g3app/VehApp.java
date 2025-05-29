@@ -44,7 +44,7 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     private Map<String, Long> neighborsTimestamps = new ConcurrentHashMap<>();
     private Map<String, Long> neighborsRSU = new ConcurrentHashMap<>();
     private final Long NeighborTimeout = 500 * TIME.MILLI_SECOND;
-    private final Long RSUTimeout = 1200 * TIME.MILLI_SECOND;
+    private final Long RSUTimeout = 800 * TIME.MILLI_SECOND;
     private GeoPoint rsuPos = new MutableGeoPoint(0.0, 0.0);
 
     @Override
@@ -88,8 +88,8 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
             if (vehInfoMsg.getSenderName().equals(getOs().getId())) {
                 return;
             }
-
             updateNeighbors(vehInfoMsg);
+
         } else if (msg instanceof RSUHello rsuHello) {
             String rsuId = rsuHello.getSenderName();
             long currentTime = getOs().getSimulationTime();
@@ -116,7 +116,7 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         removeOldNeighbors();
     }
 
-    // Em vez que fazer os loops, podemos remover apenas quando precisamos de usar os neighbous e, se o timestamp for maior que o timeout, ignore e remove
+    // Em vez que fazer os loops, podemos remover apenas quando precisamos de usar os neighbors e, se o timestamp for maior que o timeout, ignore e remove
     public void removeOldNeighbors() {
         long currentTime = getOs().getSimulationTime();
         Iterator<Map.Entry<String, Long>> iterator = neighborsTimestamps.entrySet().iterator();
@@ -199,6 +199,19 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         return null;
     }
 
+    private boolean isRSUConnected() {
+        removeOldRSUs();
+        long currentTime = getOs().getSimulationTime();
+        for (Map.Entry<String, Long> entry : neighborsRSU.entrySet()) {
+            long timestamp = entry.getValue();
+
+            if (currentTime - timestamp > RSUTimeout) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private void sendVehInfoMsg() {
         MessageRouting routing = getOs().getAdHocModule().createMessageRouting().viaChannel(AdHocChannel.CCH).topoBroadCast();
         long time = getOs().getSimulationTime();
@@ -206,7 +219,8 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         if (rsu == null) {
             rsu = "rsu_0";
         }
-        VehInfoMsg message = new VehInfoMsg(routing, time, getOs().getId(), getOs().getPosition(), this.vehHeading, this.vehSpeed, this.vehLane, rsu);
+        boolean isRsuConnected = isRSUConnected();
+        VehInfoMsg message = new VehInfoMsg(routing, time, getOs().getId(), getOs().getPosition(), this.vehHeading, this.vehSpeed, this.vehLane, rsu, isRsuConnected);
         getOs().getAdHocModule().sendV2xMessage(message);
         getLog().infoSimTime(this, "Sent VehInfoMsg: " + message.toString());
     }

@@ -30,6 +30,7 @@ public class VehInfoMsg extends V2xMessage {
     private final double senderSpeed;
     private final int senderLaneId;
     private final String destination;
+    private boolean isRsuConnected;
 
     public VehInfoMsg(
             final MessageRouting routing,
@@ -39,7 +40,8 @@ public class VehInfoMsg extends V2xMessage {
             final double heading,
             final double speed,
             final int laneId,
-            final String destination) {
+            final String destination,
+            boolean isRsuConnected) {
 
         super(routing);
         this.timeStamp = time;
@@ -49,6 +51,7 @@ public class VehInfoMsg extends V2xMessage {
         this.senderSpeed = speed;
         this.senderLaneId = laneId;
         this.destination = destination;
+        this.isRsuConnected = isRsuConnected;
         try (final ByteArrayOutputStream baos = new ByteArrayOutputStream(); final DataOutputStream dos = new DataOutputStream(baos)) {
             dos.writeLong(timeStamp);
             dos.writeUTF(senderName);
@@ -57,6 +60,7 @@ public class VehInfoMsg extends V2xMessage {
             dos.writeDouble(senderSpeed);
             dos.writeInt(senderLaneId);
             dos.writeUTF(destination);
+            dos.writeBoolean(isRsuConnected);
             payload = new EncodedPayload(baos.toByteArray(), baos.size());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -97,6 +101,10 @@ public class VehInfoMsg extends V2xMessage {
         return destination;
     }
 
+    public boolean isRsuConnected() {
+        return isRsuConnected;
+    }
+
     @Override
     public String toString() {
         return "VehInfoMsg{"
@@ -107,6 +115,7 @@ public class VehInfoMsg extends V2xMessage {
                 + ", senderSpeed=" + senderSpeed
                 + ", senderLaneId=" + senderLaneId
                 + ", destination='" + destination + '\''
+                + ", isRsuConnected=" + isRsuConnected
                 + '}';
     }
 }
