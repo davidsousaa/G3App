@@ -1,5 +1,15 @@
 package pt.uminho.npr.g3app;
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.AdHocModuleConfiguration;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.CamBuilder;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.ReceivedAcknowledgement;
@@ -10,26 +20,16 @@ import org.eclipse.mosaic.fed.application.app.api.VehicleApplication;
 import org.eclipse.mosaic.fed.application.app.api.os.VehicleOperatingSystem;
 import org.eclipse.mosaic.interactions.communication.V2xMessageTransmission;
 import org.eclipse.mosaic.lib.enums.AdHocChannel;
+import org.eclipse.mosaic.lib.geo.GeoPoint;
+import org.eclipse.mosaic.lib.geo.MutableGeoPoint;
 import org.eclipse.mosaic.lib.objects.v2x.MessageRouting;
+import org.eclipse.mosaic.lib.objects.v2x.V2xMessage;
 import org.eclipse.mosaic.lib.objects.vehicle.VehicleData;
 import org.eclipse.mosaic.lib.util.scheduling.Event;
 import org.eclipse.mosaic.rti.TIME;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.HashMap;
-import java.util.Map;
-import org.eclipse.mosaic.lib.geo.GeoPoint;
-import org.eclipse.mosaic.lib.objects.v2x.V2xMessage;
-import org.eclipse.mosaic.lib.geo.MutableGeoPoint;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.Iterator;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+public class VehApp extends AbstractApplication<VehicleOperatingSystem> implements VehicleApplication, CommunicationApplication {
 
-public class VehApp extends AbstractApplication<VehicleOperatingSystem> implements VehicleApplication, CommunicationApplication
-{
     private final long MsgDelay = 200 * TIME.MILLI_SECOND;
     private final int Power = 50;
     private final double Distance = 140.0;
@@ -39,11 +39,12 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     private double vehHeading;
     private double vehSpeed;
     private int vehLane;
-    //add RSU flag and neighbors list
 
     private Map<String, VehInfoMsg> neighbors = new ConcurrentHashMap<>();
     private Map<String, Long> neighborsTimestamps = new ConcurrentHashMap<>();
+    private Map<String, Long> neighborsRSU = new ConcurrentHashMap<>();
     private final Long NeighborTimeout = 500 * TIME.MILLI_SECOND;
+    private final Long RSUTimeout = 1200 * TIME.MILLI_SECOND;
     private GeoPoint rsuPos = new MutableGeoPoint(0.0, 0.0);
 
     @Override
@@ -70,8 +71,9 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     @Override
     public void processEvent(Event arg0) throws Exception {
         getLog().infoSimTime(this, "processEvent");
-        if(setVal == 1)
+        if (setVal == 1) {
             sendVehInfoMsg();
+        }
         getOs().getEventManager().addEvent(getOs().getSimulationTime() + MsgDelay, this);
     }
 
@@ -81,14 +83,24 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         //TODO: process received message
         V2xMessage msg = receivedMessage.getMessage();
 
-        if (msg instanceof VehInfoMsg) {
-            VehInfoMsg vehInfoMsg = (VehInfoMsg) msg;
+        if (msg instanceof VehInfoMsg vehInfoMsg) {
 
             if (vehInfoMsg.getSenderName().equals(getOs().getId())) {
                 return;
             }
 
             updateNeighbors(vehInfoMsg);
+        } else if (msg instanceof RSUHello rsuHello) {
+            String rsuId = rsuHello.getSenderName();
+            long currentTime = getOs().getSimulationTime();
+
+            neighborsRSU.put(rsuId, currentTime);
+            rsuPos = rsuHello.getSenderPos();
+
+            if (getOs().getId().equals("veh_5")) {
+                getLog().infoSimTime(this, "Received RSUHello from " + rsuId + " at position " + rsuPos);
+                getLog().infoSimTime(this, "RSU connected: " + neighborsRSU.keySet().toString());
+            }
         }
 
         // log neighbors table to output.csv (can be done in onShutdown())
@@ -97,10 +109,10 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     public void updateNeighbors(VehInfoMsg vehInfoMsg) {
         String id = vehInfoMsg.getSenderName();
         long currentTime = getOs().getSimulationTime();
-    
+
         neighbors.put(id, vehInfoMsg);
         neighborsTimestamps.put(id, currentTime);
-    
+
         removeOldNeighbors();
     }
 
@@ -108,11 +120,11 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     public void removeOldNeighbors() {
         long currentTime = getOs().getSimulationTime();
         Iterator<Map.Entry<String, Long>> iterator = neighborsTimestamps.entrySet().iterator();
-    
+
         while (iterator.hasNext()) {
             Map.Entry<String, Long> entry = iterator.next();
             long timestamp = entry.getValue();
-    
+
             if (currentTime - timestamp > NeighborTimeout) {
                 String id = entry.getKey();
                 iterator.remove();
@@ -140,10 +152,11 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     }
 
     @Override
-    public void onVehicleUpdated(@Nullable VehicleData previousVehicleData, @Nonnull VehicleData updatedVehicleData) {            
+    public void onVehicleUpdated(@Nullable VehicleData previousVehicleData, @Nonnull VehicleData updatedVehicleData) {
         getLog().infoSimTime(this, "onVehicleUpdated");
-        if(setVal == 0)
+        if (setVal == 0) {
             setVal = 1;
+        }
         this.vehHeading = updatedVehicleData.getHeading().doubleValue();
         this.vehSpeed = updatedVehicleData.getSpeed();
         this.vehLane = updatedVehicleData.getRoadPosition().getLaneIndex();
@@ -160,10 +173,40 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         getLog().infoSimTime(this, "onCamBuilding");
     }
 
-    private void sendVehInfoMsg(){
+    private void removeOldRSUs() {
+        long currentTime = getOs().getSimulationTime();
+        Iterator<Map.Entry<String, Long>> iterator = neighborsRSU.entrySet().iterator();
+
+        while (iterator.hasNext()) {
+            Map.Entry<String, Long> entry = iterator.next();
+            long timestamp = entry.getValue();
+
+            if (currentTime - timestamp > RSUTimeout && neighborsRSU.size() > 1) {
+                iterator.remove();
+            }
+        }
+    }
+
+    private String getRSU() {
+        removeOldRSUs();
+
+        if (!neighborsRSU.isEmpty()) {
+            for (String rsuId : neighborsRSU.keySet()) {
+                return rsuId;
+            }
+        }
+
+        return null;
+    }
+
+    private void sendVehInfoMsg() {
         MessageRouting routing = getOs().getAdHocModule().createMessageRouting().viaChannel(AdHocChannel.CCH).topoBroadCast();
         long time = getOs().getSimulationTime();
-        VehInfoMsg message = new VehInfoMsg(routing, time, getOs().getId(), getOs().getPosition(), this.vehHeading, this.vehSpeed, this.vehLane);
+        String rsu = this.getRSU();
+        if (rsu == null) {
+            rsu = "rsu_0";
+        }
+        VehInfoMsg message = new VehInfoMsg(routing, time, getOs().getId(), getOs().getPosition(), this.vehHeading, this.vehSpeed, this.vehLane, rsu);
         getOs().getAdHocModule().sendV2xMessage(message);
         getLog().infoSimTime(this, "Sent VehInfoMsg: " + message.toString());
     }

@@ -1,8 +1,8 @@
 package pt.uminho.npr.g3app;
 
-import java.util.List;
 import javax.annotation.Nonnull;
 import org.eclipse.mosaic.rti.DATA;
+import org.eclipse.mosaic.rti.TIME;
 import java.util.concurrent.ConcurrentHashMap;
 import org.eclipse.mosaic.lib.util.scheduling.Event;
 import org.eclipse.mosaic.lib.objects.traffic.SumoTraciResult;
@@ -28,7 +28,6 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
                 .maxUplinkBitrate(50 * DATA.MEGABIT));
 
         getLog().infoSimTime(this, "Fog Node started and ready to receive RSU interactions.");
-        getOs().getEventManager().scheduledIn(1_000, "laneInfoCleanup");
     }
 
     @Override
@@ -38,14 +37,11 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
 
     @Override
     public void processEvent(Event event) {
-        if ("laneInfoCleanup".equals(event.getTag())) {
-            cleanupLaneInfo();
-
-            getOs().getEventManager().scheduleIn(1_000, "laneInfoCleanup");
-        }
+        cleanupLaneInfo();
     }
 
     public void cleanupLaneInfo() {
+        getOs().getEventManager().addEvent(getOs().getSimulationTime() + 1000 * TIME.MILLI_SECOND, this);
         long currentTime = getOs().getSimulationTime();
 
         for (ConcurrentHashMap.Entry<String, ConcurrentHashMap<String, Long>> entry : laneOccupation.entrySet()) {
@@ -133,7 +129,7 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
                 if (currentLaneId.equals(laneId)) {
                     vehiclesInLane.put(vehicleId, timestamp);
                     return; // No need to check if it is in another lane, it would be caught before when
-                            // added to this new lane
+                    // added to this new lane
                 } else {
                     // Vehicle registered in a different lane
                     vehiclesInLane.remove(vehicleId);
@@ -175,7 +171,6 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
      * return rsus;
      * }
      */
-
     @Override
     public void onSumoTraciResponded(SumoTraciResult sumoTraciResult) {
         // Not used in this example
