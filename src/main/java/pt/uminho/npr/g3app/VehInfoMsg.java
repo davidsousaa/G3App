@@ -55,8 +55,6 @@ public class VehInfoMsg extends V2xMessage {
             dos.writeDouble(senderHeading);
             dos.writeDouble(senderSpeed);
             dos.writeInt(senderLaneId);
-            dos.writeUTF(destination);
-            dos.writeUTF(destination);
 
             payload = new EncodedPayload(baos.toByteArray(), baos.size());
         } catch (IOException e) {

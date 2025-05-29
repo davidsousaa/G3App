@@ -39,7 +39,6 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     private double vehHeading;
     private double vehSpeed;
     private int vehLane;
-    //add RSU flag and neighbors list
 
     private Map<String, VehInfoMsg> neighbors = new ConcurrentHashMap<>();
     private Map<String, Long> neighborsTimestamps = new ConcurrentHashMap<>();
