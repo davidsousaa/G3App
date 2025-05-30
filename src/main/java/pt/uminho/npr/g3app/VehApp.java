@@ -92,32 +92,50 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
             updateNeighbors(vehInfoMsg);
 
             //se a flag rsuconnected for true, dar drop. Se for false e for o melhor vizinho, dar forward para o RSU. Senão, esperar pelo timeout, se não receber uma mensagem igual a uma que tenha no buffer, enviar ele para o melhor neighbor. Falta criar função semelhante à sendVehInfoMsg para dar o forward, ou incorporar isso aqui
+            if (vehInfoMsg.getRsuConnected() || !vehInfoMsg.getNextHop().equals(getOs().getId())) {
+                // Ignore messages from the RSU or messages that are not meant for this vehicle
+                return;
+            } else {
+                getLog().infoSimTime(this, "Forwarding VehInfoMsg: " + vehInfoMsg.toString());
+                forwardMessage(vehInfoMsg);
+            }
         } else if (msg instanceof RSUHello rsuHello) {
 
             updateRSUNeighbors(rsuHello);
 
-            if (getOs().getId().equals("veh_5")) {
-                getLog().infoSimTime(this, "Received RSUHello from " + rsuHello.getSenderName());
-                getLog().infoSimTime(this, "RSU connected: " + neighborsRSUTimestamps.keySet().toString());
-            }
         }
 
         // log neighbors table to output.csv (can be done in onShutdown())
     }
 
-    public void updateRSUNeighbors(RSUHello vehInfoMsg) {
-        String id = vehInfoMsg.getSenderName();
+    public void updateRSUNeighbors(RSUHello rsuHello) {
+        String id = rsuHello.getSenderName();
         long currentTime = getOs().getSimulationTime();
 
-        neighborsRSU.put(id, vehInfoMsg);
-        neighborsTimestamps.put(id, currentTime);
+        neighborsRSU.put(id, rsuHello);
+        neighborsRSUTimestamps.put(id, currentTime);
 
-        removeOldNeighbors();
+        if (getOs().getId().equals("veh_5")) {
+            getLog().infoSimTime(this, "Received RSUHello: " + rsuHello.toString());
+            getLog().infoSimTime(this, "RSU connected: " + neighborsRSUTimestamps.keySet().toString() + " | " + neighborsRSU.keySet().toString());
+        }
+
+        removeOldRSUs();
     }
 
-    public void forwardMessage() {
-        if (this.isRSUConnected()) {
+    public void forwardMessage(VehInfoMsg vehInfoMsg) {
+        boolean rsuConnected = this.isRSUConnected();
+        MessageRouting routing = getOs().getAdHocModule().createMessageRouting().viaChannel(AdHocChannel.CCH).topoBroadCast();
+        String rsu = this.getRSU();
 
+        if (rsuConnected) {
+            VehInfoMsg forwardedMsg = new VehInfoMsg(routing, vehInfoMsg.getTimeStamp(), vehInfoMsg.getSenderName(), vehInfoMsg.getSenderPosition(), vehInfoMsg.getHeading(), vehInfoMsg.getSpeed(), vehInfoMsg.getLaneId(), vehInfoMsg.getDestination(), rsuConnected, rsu);
+
+            getOs().getAdHocModule().sendV2xMessage(forwardedMsg);
+
+            getLog().infoSimTime(this, "Forwarded VehInfoMsg to RSU: " + vehInfoMsg.toString());
+        } else {
+            getLog().warnSimTime(this, "Cannot forward message, RSU is not connected.");
         }
     }
 
@@ -272,7 +290,7 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         long time = getOs().getSimulationTime();
         String rsu = this.getRSU();
         VehInfoMsg message = null;
-        if (rsu == null) {
+        if (rsu == null) { //Caso inicial, onde podem ainda não ter recebido mensagens de RSUHello do primeiro RSU
             rsu = "rsu_0";
         }
         boolean isRsuConnected = isRSUConnected();

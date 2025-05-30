@@ -30,8 +30,8 @@ public class VehInfoMsg extends V2xMessage {
     private final double senderSpeed;
     private final int senderLaneId;
     private final String destination;
-    private boolean rsuConnected;
-    private String nextHop;
+    private final boolean rsuConnected;
+    private final String nextHop;
 
     public VehInfoMsg(
             final MessageRouting routing,
@@ -109,16 +109,8 @@ public class VehInfoMsg extends V2xMessage {
         return rsuConnected;
     }
 
-    public void setRsuConnected(boolean rsuConnected) {
-        this.rsuConnected = rsuConnected;
-    }
-
     public String getNextHop() {
         return nextHop;
-    }
-
-    public void setNextHop(String nextHop) {
-        this.nextHop = nextHop;
     }
 
     @Override

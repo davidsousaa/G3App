@@ -1,9 +1,12 @@
 package pt.uminho.npr.g3app;
 
 import javax.annotation.Nonnull;
+
 import org.eclipse.mosaic.rti.DATA;
 import org.eclipse.mosaic.rti.TIME;
+
 import java.util.concurrent.ConcurrentHashMap;
+
 import org.eclipse.mosaic.lib.util.scheduling.Event;
 import org.eclipse.mosaic.lib.objects.traffic.SumoTraciResult;
 import org.eclipse.mosaic.fed.application.app.AbstractApplication;
@@ -15,6 +18,8 @@ import org.eclipse.mosaic.interactions.communication.V2xMessageTransmission;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.CamBuilder;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.ReceivedV2xMessage;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.CellModuleConfiguration;
+
+import java.util.ArrayList;
 
 public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
         implements CommunicationApplication, MosaicApplication {
@@ -148,29 +153,19 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
 
     }
 
-    /*
-     * private List<String> getAssignedRsus() {
-     * String fogId = getOs().getId();
-     * 
-     * int fogIndex;
-     * try {
-     * fogIndex = Integer.parseInt(fogId.split("_")[1]);
-     * } catch (Exception e) {
-     * getLog().infoSimTime(this, "Invalid fog ID format: " + fogId);
-     * return Collections.emptyList(); // fallback
-     * }
-     * 
-     * List<String> rsus = new ArrayList<>();
-     * int start = fogIndex * 9;
-     * int end = (fogIndex == 4) ? 44 : start + 9;
-     * 
-     * for (int i = start; i < end; i++) {
-     * rsus.add("rsu_" + i);
-     * }
-     * 
-     * return rsus;
-     * }
-     */
+    private ArrayList<String> getAssignedRSUs() {
+        ArrayList<String> assignedRSUs = new ArrayList<>();
+        if (getOs().getId().equals("server_0")) {
+            assignedRSUs.add("rsu_0");
+            assignedRSUs.add("rsu_1");
+            assignedRSUs.add("rsu_2");
+        } else {
+            assignedRSUs.add("rsu_3");
+            assignedRSUs.add("rsu_4");
+        }
+        return assignedRSUs;
+    }
+
     @Override
     public void onSumoTraciResponded(SumoTraciResult sumoTraciResult) {
         // Not used in this example
