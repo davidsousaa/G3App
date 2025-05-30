@@ -14,6 +14,7 @@ import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.Ad
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.CamBuilder;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.ReceivedAcknowledgement;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.ReceivedV2xMessage;
+import org.eclipse.mosaic.fed.application.ambassador.simulation.navigation.INavigationModule;
 import org.eclipse.mosaic.fed.application.app.AbstractApplication;
 import org.eclipse.mosaic.fed.application.app.api.CommunicationApplication;
 import org.eclipse.mosaic.fed.application.app.api.VehicleApplication;
@@ -24,6 +25,11 @@ import org.eclipse.mosaic.lib.geo.GeoPoint;
 import org.eclipse.mosaic.lib.objects.v2x.MessageRouting;
 import org.eclipse.mosaic.lib.objects.v2x.V2xMessage;
 import org.eclipse.mosaic.lib.objects.vehicle.VehicleData;
+import org.eclipse.mosaic.lib.routing.CandidateRoute;
+import org.eclipse.mosaic.lib.routing.RoutingParameters;
+import org.eclipse.mosaic.lib.routing.RoutingPosition;
+import org.eclipse.mosaic.lib.routing.RoutingResponse;
+import org.eclipse.mosaic.lib.routing.util.ReRouteSpecificConnectionsCostFunction;
 import org.eclipse.mosaic.lib.util.scheduling.Event;
 import org.eclipse.mosaic.rti.TIME;
 
@@ -82,28 +88,56 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         //TODO: process received message
         V2xMessage msg = receivedMessage.getMessage();
 
-        if (msg instanceof VehInfoMsg vehInfoMsg) {
+        switch (msg) {
+            case VehInfoMsg vehInfoMsg -> {
 
-            if (vehInfoMsg.getSenderName().equals(getOs().getId())) {
-                return;
+                if (vehInfoMsg.getSenderName().equals(getOs().getId())) {
+                    return;
+                }
+                updateNeighbors(vehInfoMsg);
+
+                //se a flag rsuconnected for true, dar drop. Se for false e for o melhor vizinho, dar forward para o RSU. Senão, esperar pelo timeout, se não receber uma mensagem igual a uma que tenha no buffer, enviar ele para o melhor neighbor. Falta criar função semelhante à sendVehInfoMsg para dar o forward, ou incorporar isso aqui
+                if (vehInfoMsg.getRsuConnected() || !vehInfoMsg.getNextHop().equals(getOs().getId())) {
+                    // Ignore messages from the RSU or messages that are not meant for this vehicle
+                    return;
+                } else {
+                    getLog().infoSimTime(this, "Forwarding VehInfoMsg: " + vehInfoMsg.toString());
+                    forwardMessage(vehInfoMsg);
+                }
             }
-            updateNeighbors(vehInfoMsg);
-
-            //se a flag rsuconnected for true, dar drop. Se for false e for o melhor vizinho, dar forward para o RSU. Senão, esperar pelo timeout, se não receber uma mensagem igual a uma que tenha no buffer, enviar ele para o melhor neighbor. Falta criar função semelhante à sendVehInfoMsg para dar o forward, ou incorporar isso aqui
-            if (vehInfoMsg.getRsuConnected() || !vehInfoMsg.getNextHop().equals(getOs().getId())) {
-                // Ignore messages from the RSU or messages that are not meant for this vehicle
-                return;
-            } else {
-                getLog().infoSimTime(this, "Forwarding VehInfoMsg: " + vehInfoMsg.toString());
-                forwardMessage(vehInfoMsg);
+            case RSUHello rsuHello ->
+                updateRSUNeighbors(rsuHello);
+            case WarningMsg warningMsg -> {
+                getLog().infoSimTime(this, "Received WarningMsg: " + warningMsg.toString());
+                forwardMessage(warningMsg);
             }
-        } else if (msg instanceof RSUHello rsuHello) {
-
-            updateRSUNeighbors(rsuHello);
-
+            case RerouteMsg rerouteMsg -> {
+                getLog().infoSimTime(this, "Received RerouteMsg: " + rerouteMsg.toString());
+                // circumnavigateAffectedRoad("50952691#2", 0.0);
+            }
+            default -> {
+            }
         }
-
         // log neighbors table to output.csv (can be done in onShutdown())
+    }
+
+    private void circumnavigateAffectedRoad(final String affectedRoadId, double causedSpeed) {
+        ReRouteSpecificConnectionsCostFunction myCostFunction = new ReRouteSpecificConnectionsCostFunction();
+        myCostFunction.setConnectionSpeedMS(affectedRoadId, causedSpeed);
+
+        INavigationModule navigationModule = getOs().getNavigationModule();
+
+        RoutingParameters routingParameters = new RoutingParameters().costFunction(myCostFunction);
+
+        RoutingResponse response = navigationModule.calculateRoutes(new RoutingPosition(navigationModule.getTargetPosition()), routingParameters);
+
+        CandidateRoute newRoute = response.getBestRoute();
+        if (newRoute != null) {
+            getLog().infoSimTime(this, "Alterar rota para evitar: " + affectedRoadId);
+            navigationModule.switchRoute(newRoute);
+        } else {
+            getLog().warnSimTime(this, "Nenhuma rota alternativa encontrada para evitar: " + affectedRoadId);
+        }
     }
 
     public void updateRSUNeighbors(RSUHello rsuHello) {

@@ -35,7 +35,7 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
     private final Map<String, VehInfoMsg> neighbors = new HashMap<>();
     private final Map<String, Long> neighborsTimestamps = new HashMap<>();
     private static final long NeighborTimeout = 500 * TIME.MILLI_SECOND;
-    private boolean routeChanged = false;
+    private boolean changeRoute = false;
 
     @Override
     public void onStartup() {
@@ -123,7 +123,7 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
                 getOs().sendInteractionToRti(interaction);
             }
             case WarningMsg warningMsg -> {
-                if (!warningMsg.getSenderName().equals(getOs().getId()) && !this.routeChanged) {
+                if (!warningMsg.getSenderName().equals(getOs().getId())) {
                     getLog().infoSimTime(this, "RSU: Received WarningMsg from " + warningMsg.getSenderName() + ", sending it to Fog Node.");
                     RsuFogInteraction interaction = new RsuFogInteraction(
                             getOs().getSimulationTime(), getFogNode(),
@@ -131,9 +131,6 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
                             getOs().getId()
                     );
                     getOs().sendInteractionToRti(interaction);
-                    if (!this.routeChanged) {
-                        this.routeChanged = true;
-                    }
                 }
             }
             default ->
@@ -196,6 +193,11 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
     @Override
     public void processEvent(Event event) {
         sendHelloMessage();
+
+        if (this.changeRoute) {
+            sendRerouteMessage();
+        }
+
         getOs().getEventManager().addEvent(getOs().getSimulationTime() + 500 * TIME.MILLI_SECOND, this);
     }
 
@@ -204,11 +206,35 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
         getLog().infoSimTime(this, "RSU: ACK received.");
     }
 
+    public void sendRerouteMessage() {
+        String newRoute = "r_1";
+        MessageRouting routing = getOs().getAdHocModule().createMessageRouting()
+                .viaChannel(AdHocChannel.CCH)
+                .topoBroadCast();
+
+        RerouteMsg rerouteMsg = new RerouteMsg(
+                routing,
+                getOs().getId(),
+                getOs().getSimulationTime(),
+                newRoute
+        );
+
+        getOs().getAdHocModule().sendV2xMessage(rerouteMsg);
+        getLog().infoSimTime(this, "Sent RerouteMsg: " + rerouteMsg.toString());
+    }
+
     @Override
     public void onInteractionReceived(ApplicationInteraction interaction) {
         getLog().infoSimTime(this, "RSU: Received interaction: " + interaction.toString());
         if (interaction instanceof RsuFogInteraction rsuMsg) {
-            getLog().infoSimTime(this, "RSU: Received RsuFogInteraction: " + rsuMsg.getContent());
+            if (rsuMsg.getContent().equals("r_1")) {
+
+                getLog().infoSimTime(this, "RSU: Received RsuFogInteraction with content: " + rsuMsg.getContent());
+                this.changeRoute = true;
+
+            } else {
+                getLog().infoSimTime(this, "RSU: Received RsuFogInteraction: " + rsuMsg.getContent());
+            }
         } else {
             getLog().infoSimTime(this, "RSU: Received unknown interaction type: " + interaction.toString());
         }

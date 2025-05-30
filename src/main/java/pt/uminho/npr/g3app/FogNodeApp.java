@@ -94,7 +94,7 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
                 RsuFogInteraction response = new RsuFogInteraction(getOs().getSimulationTime(), rsuMsg.getSenderId(),
                         "Received by server_0", getOs().getId());
                 getOs().sendInteractionToRti(response);
-                processMessage(response);
+                processMessage(rsuMsg);
             } else {
                 getLog().infoSimTime(this,
                         "Fog Node received RsuFogInteraction not targeted to this node: " + rsuMsg.getContent());
@@ -112,7 +112,7 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
                 processStatusMessage(content);
                 break;
             case "WarningMessage":
-                processWarningMessage(content);
+                processWarningMessage(content, message.getSenderId());
                 break;
             default:
                 break;
@@ -149,8 +149,11 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
                 .put(vehicleId, timestamp);
     }
 
-    private void processWarningMessage(String message) {
+    private void processWarningMessage(String message, String senderId) {
 
+        RsuFogInteraction response = new RsuFogInteraction(getOs().getSimulationTime(), senderId,
+                "r_1", getOs().getId());
+        getOs().sendInteractionToRti(response);
     }
 
     private ArrayList<String> getAssignedRSUs() {
