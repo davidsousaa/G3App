@@ -278,13 +278,13 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         boolean isRsuConnected = isRSUConnected();
 
         if (isRsuConnected) {
-            message = new VehInfoMsg(routing, time, getOs().getId(), getOs().getPosition(), this.vehHeading, this.vehSpeed, this.vehLane, rsu, isRsuConnected);
+            message = new VehInfoMsg(routing, time, getOs().getId(), getOs().getPosition(), this.vehHeading, this.vehSpeed, this.vehLane, rsu, isRsuConnected, rsu);
 
             getOs().getAdHocModule().sendV2xMessage(message);
         } else {
             String bestNeighbor = getBestNeighbor();
             if (bestNeighbor != null) {
-                message = new VehInfoMsg(routing, time, getOs().getId(), getOs().getPosition(), this.vehHeading, this.vehSpeed, this.vehLane, bestNeighbor, isRsuConnected);
+                message = new VehInfoMsg(routing, time, getOs().getId(), getOs().getPosition(), this.vehHeading, this.vehSpeed, this.vehLane, rsu, isRsuConnected, bestNeighbor);
                 getOs().getAdHocModule().sendV2xMessage(message);
             } else {
                 getLog().warnSimTime(this, "No suitable neighbor found to forward the message.");
