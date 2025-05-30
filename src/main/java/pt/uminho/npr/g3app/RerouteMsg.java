@@ -6,7 +6,6 @@ import java.io.IOException;
 
 import javax.annotation.Nonnull;
 
-import org.eclipse.mosaic.lib.geo.GeoPoint;
 import org.eclipse.mosaic.lib.objects.v2x.EncodedPayload;
 import org.eclipse.mosaic.lib.objects.v2x.MessageRouting;
 import org.eclipse.mosaic.lib.objects.v2x.V2xMessage;
@@ -16,27 +15,30 @@ import org.eclipse.mosaic.lib.objects.v2x.V2xMessage;
  * senderID
  * sender position
  */
-public class ChangeRoute extends V2xMessage {
+public class RerouteMsg extends V2xMessage {
 
     private final EncodedPayload payload;
     private final long timeStamp;
     private final String senderName;
+    private final String newRoute;
 
-    public ChangeRoute(
+    public RerouteMsg(
             final MessageRouting routing,
             final String senderName,
-            final GeoPoint pos,
-            final long time) {
+            final long time,
+            final String newRoute) {
 
         super(routing);
         this.timeStamp = time;
         this.senderName = senderName;
+        this.newRoute = newRoute;
         try (final ByteArrayOutputStream baos = new ByteArrayOutputStream(); final DataOutputStream dos = new DataOutputStream(baos)) {
             dos.writeLong(timeStamp);
             dos.writeUTF(senderName);
+            dos.writeUTF(newRoute);
             payload = new EncodedPayload(baos.toByteArray(), baos.size());
         } catch (IOException e) {
-            throw new RuntimeException("Error creating ChangeRoute payload", e);
+            throw new RuntimeException("Error creating RerouteMsg payload", e);
         }
     }
 
@@ -52,6 +54,10 @@ public class ChangeRoute extends V2xMessage {
 
     public String getSenderName() {
         return senderName;
+    }
+
+    public String getNewRoute() {
+        return newRoute;
     }
 
     @Override

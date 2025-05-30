@@ -21,7 +21,6 @@ import org.eclipse.mosaic.fed.application.app.api.os.VehicleOperatingSystem;
 import org.eclipse.mosaic.interactions.communication.V2xMessageTransmission;
 import org.eclipse.mosaic.lib.enums.AdHocChannel;
 import org.eclipse.mosaic.lib.geo.GeoPoint;
-import org.eclipse.mosaic.lib.geo.MutableGeoPoint;
 import org.eclipse.mosaic.lib.objects.v2x.MessageRouting;
 import org.eclipse.mosaic.lib.objects.v2x.V2xMessage;
 import org.eclipse.mosaic.lib.objects.vehicle.VehicleData;
@@ -46,7 +45,6 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     private Map<String, RSUHello> neighborsRSU = new ConcurrentHashMap<>();
     private final Long NeighborTimeout = 500 * TIME.MILLI_SECOND;
     private final Long RSUTimeout = 800 * TIME.MILLI_SECOND;
-    private GeoPoint rsuPos = new MutableGeoPoint(0.0, 0.0);
 
     @Override
     public void onShutdown() {
@@ -123,17 +121,30 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         removeOldRSUs();
     }
 
-    public void forwardMessage(VehInfoMsg vehInfoMsg) {
+    public void forwardMessage(V2xMessage message) {
         boolean rsuConnected = this.isRSUConnected();
         MessageRouting routing = getOs().getAdHocModule().createMessageRouting().viaChannel(AdHocChannel.CCH).topoBroadCast();
         String rsu = this.getRSU();
 
         if (rsuConnected) {
-            VehInfoMsg forwardedMsg = new VehInfoMsg(routing, vehInfoMsg.getTimeStamp(), vehInfoMsg.getSenderName(), vehInfoMsg.getSenderPosition(), vehInfoMsg.getHeading(), vehInfoMsg.getSpeed(), vehInfoMsg.getLaneId(), vehInfoMsg.getDestination(), rsuConnected, rsu);
+            switch (message) {
+                case VehInfoMsg vehInfoMsg -> {
+                    VehInfoMsg forwardedMsg = new VehInfoMsg(routing, vehInfoMsg.getTimeStamp(), vehInfoMsg.getSenderName(), vehInfoMsg.getSenderPosition(), vehInfoMsg.getHeading(), vehInfoMsg.getSpeed(), vehInfoMsg.getLaneId(), vehInfoMsg.getDestination(), rsuConnected, rsu);
 
-            getOs().getAdHocModule().sendV2xMessage(forwardedMsg);
+                    getOs().getAdHocModule().sendV2xMessage(forwardedMsg);
 
-            getLog().infoSimTime(this, "Forwarded VehInfoMsg to RSU: " + vehInfoMsg.toString());
+                    getLog().infoSimTime(this, "Forwarded VehInfoMsg to RSU: " + vehInfoMsg.toString());
+                }
+                case WarningMsg warningMsg -> {
+                    WarningMsg forwardedWarning = new WarningMsg(routing, warningMsg.getTimeStamp(), warningMsg.getSenderName(), warningMsg.getSenderPosition(), warningMsg.getDestination(), rsuConnected, rsu, warningMsg.getWarningMessage());
+
+                    getOs().getAdHocModule().sendV2xMessage(forwardedWarning);
+
+                    getLog().infoSimTime(this, "Forwarded WarningMsg to RSU: " + warningMsg.toString());
+                }
+                default -> {
+                }
+            }
         } else {
             getLog().warnSimTime(this, "Cannot forward message, RSU is not connected.");
         }

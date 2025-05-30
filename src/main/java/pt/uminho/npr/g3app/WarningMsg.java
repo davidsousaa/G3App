@@ -80,7 +80,7 @@ public class WarningMsg extends V2xMessage {
         return senderPos;
     }
 
-    public String getdestination() {
+    public String getDestination() {
         return destination;
     }
 

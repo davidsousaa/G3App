@@ -35,6 +35,7 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
     private final Map<String, VehInfoMsg> neighbors = new HashMap<>();
     private final Map<String, Long> neighborsTimestamps = new HashMap<>();
     private static final long NeighborTimeout = 500 * TIME.MILLI_SECOND;
+    private boolean routeChanged = false;
 
     @Override
     public void onStartup() {
@@ -57,7 +58,7 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
     public String getFogNode() {
         float idValue = getIntId();
 
-        if (idValue < 0 || idValue > 43) {
+        if (idValue < 0 || idValue > 5) {
             return "server_0"; // fallback
         }
 
@@ -106,19 +107,37 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
     public void onMessageReceived(@Nonnull ReceivedV2xMessage receivedMessage) {
         V2xMessage msg = receivedMessage.getMessage();
 
-        if (msg instanceof VehInfoMsg vehMsg) {
-            if (!vehMsg.getSenderName().equals(getOs().getId())) {
-                updateNeighbors(vehMsg);
-            }
+        switch (msg) {
+            case VehInfoMsg vehMsg -> {
+                if (!vehMsg.getSenderName().equals(getOs().getId())) {
+                    updateNeighbors(vehMsg);
+                }
 
-            String sender = vehMsg.getSenderName();
-            getLog().infoSimTime(this, "RSU: Received VehInfoMsg from " + sender + " sending it to Fog Node.");
-            RsuFogInteraction interaction = new RsuFogInteraction(
-                    getOs().getSimulationTime(), getFogNode(),
-                    "Forwarded VehInfoMsg from " + sender + " | " + msg.toString(),
-                    getOs().getId()
-            );
-            getOs().sendInteractionToRti(interaction);
+                String sender = vehMsg.getSenderName();
+                getLog().infoSimTime(this, "RSU: Received VehInfoMsg from " + sender + " sending it to Fog Node.");
+                RsuFogInteraction interaction = new RsuFogInteraction(
+                        getOs().getSimulationTime(), getFogNode(),
+                        "Forwarded VehInfoMsg from " + sender + " | " + msg.toString(),
+                        getOs().getId()
+                );
+                getOs().sendInteractionToRti(interaction);
+            }
+            case WarningMsg warningMsg -> {
+                if (!warningMsg.getSenderName().equals(getOs().getId()) && !this.routeChanged) {
+                    getLog().infoSimTime(this, "RSU: Received WarningMsg from " + warningMsg.getSenderName() + ", sending it to Fog Node.");
+                    RsuFogInteraction interaction = new RsuFogInteraction(
+                            getOs().getSimulationTime(), getFogNode(),
+                            "Forwarded WarningMsg from " + warningMsg.getSenderName() + " | " + msg.toString(),
+                            getOs().getId()
+                    );
+                    getOs().sendInteractionToRti(interaction);
+                    if (!this.routeChanged) {
+                        this.routeChanged = true;
+                    }
+                }
+            }
+            default ->
+                getLog().warnSimTime(this, "RSU: Received unknown message type: " + msg.getClass().getSimpleName());
         }
     }
 
