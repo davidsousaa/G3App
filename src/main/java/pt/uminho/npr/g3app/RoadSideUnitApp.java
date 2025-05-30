@@ -61,16 +61,10 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
             return "server_0"; // fallback
         }
 
-        if (idValue < 9) {
+        if (idValue < 3) {
             return "server_0";
-        } else if (idValue < 18) {
-            return "server_1";
-        } else if (idValue < 27) {
-            return "server_2";
-        } else if (idValue < 36) {
-            return "server_3";
         } else {
-            return "server_4";
+            return "server_1";
         }
     }
 
@@ -194,8 +188,7 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
     @Override
     public void onInteractionReceived(ApplicationInteraction interaction) {
         getLog().infoSimTime(this, "RSU: Received interaction: " + interaction.toString());
-        if (interaction instanceof RsuFogInteraction) {
-            RsuFogInteraction rsuMsg = (RsuFogInteraction) interaction;
+        if (interaction instanceof RsuFogInteraction rsuMsg) {
             getLog().infoSimTime(this, "RSU: Received RsuFogInteraction: " + rsuMsg.getContent());
         } else {
             getLog().infoSimTime(this, "RSU: Received unknown interaction type: " + interaction.toString());

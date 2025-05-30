@@ -30,6 +30,8 @@ public class VehInfoMsg extends V2xMessage {
     private final double senderSpeed;
     private final int senderLaneId;
     private final String destination;
+    private final boolean rsuConnected;
+    private final String nextHop;
 
     public VehInfoMsg(
             final MessageRouting routing,
@@ -39,7 +41,9 @@ public class VehInfoMsg extends V2xMessage {
             final double heading,
             final double speed,
             final int laneId,
-            final String destination) {
+            final String destination,
+            boolean rsuConnected,
+            String nextHop) {
 
         super(routing);
         this.timeStamp = time;
@@ -49,6 +53,8 @@ public class VehInfoMsg extends V2xMessage {
         this.senderSpeed = speed;
         this.senderLaneId = laneId;
         this.destination = destination;
+        this.rsuConnected = rsuConnected;
+        this.nextHop = nextHop;
         try (final ByteArrayOutputStream baos = new ByteArrayOutputStream(); final DataOutputStream dos = new DataOutputStream(baos)) {
             dos.writeLong(timeStamp);
             dos.writeUTF(senderName);
@@ -57,6 +63,8 @@ public class VehInfoMsg extends V2xMessage {
             dos.writeDouble(senderSpeed);
             dos.writeInt(senderLaneId);
             dos.writeUTF(destination);
+            dos.writeBoolean(rsuConnected);
+            dos.writeUTF(nextHop);
             payload = new EncodedPayload(baos.toByteArray(), baos.size());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -97,6 +105,14 @@ public class VehInfoMsg extends V2xMessage {
         return destination;
     }
 
+    public boolean getRsuConnected() {
+        return rsuConnected;
+    }
+
+    public String getNextHop() {
+        return nextHop;
+    }
+
     @Override
     public String toString() {
         return "VehInfoMsg{"
@@ -107,6 +123,8 @@ public class VehInfoMsg extends V2xMessage {
                 + ", senderSpeed=" + senderSpeed
                 + ", senderLaneId=" + senderLaneId
                 + ", destination='" + destination + '\''
+                + ", rsuConnected=" + rsuConnected
+                + ", nextHop='" + nextHop + '\''
                 + '}';
     }
 }

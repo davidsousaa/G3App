@@ -91,40 +91,16 @@
     {
       "name": "FogNode",
       "position": {
-        "latitude": 41.556792,
-        "longitude": -8.398758
+        "latitude": 41.555955,
+        "longitude": -8.402317
       },
       "applications": ["pt.uminho.npr.g3app.FogNodeApp"]
     },
     {
       "name": "FogNode",
       "position": {
-        "latitude": 41.555292,
-        "longitude": -8.402230
-      },
-      "applications": ["pt.uminho.npr.g3app.FogNodeApp"]
-    },
-    {
-      "name": "FogNode",
-      "position": {
-        "latitude": 41.553310,
-        "longitude": -8.406229
-      },
-      "applications": ["pt.uminho.npr.g3app.FogNodeApp"]
-    },
-    {
-      "name": "FogNode",
-      "position": {
-        "latitude": 41.551847,
-        "longitude": -8.409834
-      },
-      "applications": ["pt.uminho.npr.g3app.FogNodeApp"]
-    },
-    {
-      "name": "FogNode",
-      "position": {
-        "latitude": 41.554253,
-        "longitude": -8.410153
+        "latitude": 41.552900,
+        "longitude": -8.408841
       },
       "applications": ["pt.uminho.npr.g3app.FogNodeApp"]
     }
