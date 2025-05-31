@@ -36,6 +36,7 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
     private final Map<String, Long> neighborsTimestamps = new HashMap<>();
     private static final long NeighborTimeout = 500 * TIME.MILLI_SECOND;
     private boolean changeRoute = false;
+    private boolean warningReceived = false;
 
     @Override
     public void onStartup() {
@@ -123,7 +124,8 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
                 getOs().sendInteractionToRti(interaction);
             }
             case WarningMsg warningMsg -> {
-                if (!warningMsg.getSenderName().equals(getOs().getId())) {
+                if (!warningMsg.getSenderName().equals(getOs().getId()) && !warningReceived) {
+                    warningReceived = true;
                     getLog().infoSimTime(this, "RSU: Received WarningMsg from " + warningMsg.getSenderName() + ", sending it to Fog Node.");
                     RsuFogInteraction interaction = new RsuFogInteraction(
                             getOs().getSimulationTime(), getFogNode(),
@@ -227,7 +229,7 @@ public class RoadSideUnitApp extends AbstractApplication<RoadSideUnitOperatingSy
     public void onInteractionReceived(ApplicationInteraction interaction) {
         getLog().infoSimTime(this, "RSU: Received interaction: " + interaction.toString());
         if (interaction instanceof RsuFogInteraction rsuMsg) {
-            if (rsuMsg.getContent().equals("r_1")) {
+            if (rsuMsg.getContent().equals("Reroute")) {
 
                 getLog().infoSimTime(this, "RSU: Received RsuFogInteraction with content: " + rsuMsg.getContent());
                 this.changeRoute = true;

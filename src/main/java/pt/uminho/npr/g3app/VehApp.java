@@ -1,5 +1,6 @@
 package pt.uminho.npr.g3app;
 
+import java.awt.Color;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -40,6 +41,10 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     private final double Distance = 140.0;
 
     private int setVal;
+    private boolean changedRoute = false;
+    private final GeoPoint roadblockTriggerPoint = GeoPoint.latLon(41.551134, -8.411374);
+    private final double roadblockTriggerRadius = 10.0;
+    private boolean roadblockTriggered = false;
 
     private double vehHeading;
     private double vehSpeed;
@@ -69,6 +74,11 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
                 .create());
 
         getLog().infoSimTime(this, "onStartup: Set up");
+        if (getOs().getId().equals("veh_75")) {
+            getOs().requestVehicleParametersUpdate()
+                    .changeColor(Color.RED)
+                    .apply();
+        }
         setVal = 0;
         getOs().getEventManager().addEvent(getOs().getSimulationTime() + MsgDelay, this);
     }
@@ -108,12 +118,22 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
             case RSUHello rsuHello ->
                 updateRSUNeighbors(rsuHello);
             case WarningMsg warningMsg -> {
-                getLog().infoSimTime(this, "Received WarningMsg: " + warningMsg.toString());
-                forwardMessage(warningMsg);
+                if (warningMsg.getSenderName().equals(getOs().getId()) || warningMsg.getRsuConnected() || !warningMsg.getNextHop().equals(getOs().getId())) {
+                    return;
+                } else {
+                    getLog().infoSimTime(this, "Forwarding WarningMsg: " + warningMsg.toString());
+                    forwardMessage(warningMsg);
+                }
+
             }
             case RerouteMsg rerouteMsg -> {
                 getLog().infoSimTime(this, "Received RerouteMsg: " + rerouteMsg.toString());
-                // circumnavigateAffectedRoad("50952691#2", 0.0);
+                if (!changedRoute) {
+                    changedRoute = true;
+                    circumnavigateAffectedRoad("50952691#2", 0.0);
+                } else {
+                    getLog().warnSimTime(this, "Reroute already applied, ignoring: " + rerouteMsg.toString());
+                }
             }
             default -> {
             }
@@ -156,9 +176,9 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     }
 
     public void forwardMessage(V2xMessage message) {
-        boolean rsuConnected = this.isRSUConnected();
+        boolean rsuConnected = isRSUConnected();
         MessageRouting routing = getOs().getAdHocModule().createMessageRouting().viaChannel(AdHocChannel.CCH).topoBroadCast();
-        String rsu = this.getRSU();
+        String rsu = getRSU();
 
         if (rsuConnected) {
             switch (message) {
@@ -174,7 +194,7 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
 
                     getOs().getAdHocModule().sendV2xMessage(forwardedWarning);
 
-                    getLog().infoSimTime(this, "Forwarded WarningMsg to RSU: " + warningMsg.toString());
+                    getLog().infoSimTime(this, "Forwarded WarningMsg to RSU: " + forwardedWarning.toString());
                 }
                 default -> {
                 }
@@ -238,6 +258,38 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         this.vehHeading = updatedVehicleData.getHeading().doubleValue();
         this.vehSpeed = updatedVehicleData.getSpeed();
         this.vehLane = updatedVehicleData.getRoadPosition().getLaneIndex();
+
+        GeoPoint currentPosition = updatedVehicleData.getPosition();
+
+        if (getOs().getId().equals("veh_75") && !roadblockTriggered && currentPosition.distanceTo(roadblockTriggerPoint) < roadblockTriggerRadius) {
+            getLog().infoSimTime(this, "Roadblock triggered at position: " + currentPosition.toString());
+            roadblockTriggered = true;
+            sendWarningMsg();
+        }
+
+    }
+
+    public void sendWarningMsg() {
+        MessageRouting routing = getOs().getAdHocModule().createMessageRouting().viaChannel(AdHocChannel.CCH).topoBroadCast();
+        long time = getOs().getSimulationTime();
+        String rsu = this.getRSU();
+        boolean isRsuConnected = isRSUConnected();
+        WarningMsg warningMsg;
+
+        if (isRsuConnected) {
+            warningMsg = new WarningMsg(routing, time, getOs().getId(), getOs().getPosition(), rsu, isRsuConnected, rsu, "Roadblock");
+            getOs().getAdHocModule().sendV2xMessage(warningMsg);
+            getLog().infoSimTime(this, "Sent WarningMsg to RSU: " + warningMsg.toString());
+        } else {
+            String bestNeighbor = getBestNeighbor();
+            if (bestNeighbor != null) {
+                warningMsg = new WarningMsg(routing, time, getOs().getId(), getOs().getPosition(), rsu, isRsuConnected, bestNeighbor, "Roadblock");
+                getOs().getAdHocModule().sendV2xMessage(warningMsg);
+                getLog().infoSimTime(this, "Sent WarningMsg to best neighbor: " + warningMsg.toString());
+            } else {
+                getLog().warnSimTime(this, "No suitable neighbor found to forward the message.");
+            }
+        }
     }
 
     @Override

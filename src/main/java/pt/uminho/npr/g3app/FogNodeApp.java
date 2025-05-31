@@ -6,6 +6,8 @@ import org.eclipse.mosaic.rti.DATA;
 import org.eclipse.mosaic.rti.TIME;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.ArrayList;
+import java.util.regex.*;
 
 import org.eclipse.mosaic.lib.util.scheduling.Event;
 import org.eclipse.mosaic.lib.objects.traffic.SumoTraciResult;
@@ -25,6 +27,7 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
         implements CommunicationApplication, MosaicApplication {
 
     private ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> laneOccupation = new ConcurrentHashMap<String, ConcurrentHashMap<String, Long>>();
+    private boolean changedRoute = false;
 
     @Override
     public void onStartup() {
@@ -106,15 +109,30 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
 
     private void processMessage(RsuFogInteraction message) {
         String content = message.getContent();
-        String messageType = content.split("\\{")[0].strip();
+        //String messageType = content.split("\\{")[0].strip();
+        Pattern pattern = Pattern.compile("(\\w+Msg)\\{");
+        Matcher matcher = pattern.matcher(content);
+        String messageType = null;
+
+        if (matcher.find()) {
+            messageType = matcher.group(1);
+        }
+
+        getLog().infoSimTime(this, "Processing message of type: " + messageType);
         switch (messageType) {
-            case "VehInfoMessage":
+            case "VehInfoMsg":
                 processStatusMessage(content);
                 break;
-            case "WarningMessage":
-                processWarningMessage(content, message.getSenderId());
+            case "WarningMsg":
+                if (!changedRoute) {
+                    processWarningMessage(content, message.getSenderId());
+                    getLog().infoSimTime(this, "Processing WarningMsg: " + content);
+                } else {
+                    getLog().warnSimTime(this, "WarningMessage already processed, ignoring: " + content);
+                }
                 break;
             default:
+                getLog().warnSimTime(this, "Unknown message type received: " + messageType + " with content: " + content);
                 break;
         }
     }
@@ -151,9 +169,17 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
 
     private void processWarningMessage(String message, String senderId) {
 
-        RsuFogInteraction response = new RsuFogInteraction(getOs().getSimulationTime(), senderId,
-                "r_1", getOs().getId());
-        getOs().sendInteractionToRti(response);
+        ArrayList<String> assignedRSUs = getAssignedRSUs();
+        if (assignedRSUs.isEmpty()) {
+            getLog().warnSimTime(this, "No RSUs assigned to this Fog Node.");
+            return;
+        }
+
+        for (String rsuId : assignedRSUs) {
+            RsuFogInteraction interaction = new RsuFogInteraction(getOs().getSimulationTime(), rsuId, "Reroute", getOs().getId());
+            getOs().sendInteractionToRti(interaction);
+        }
+        this.changedRoute = true;
     }
 
     private ArrayList<String> getAssignedRSUs() {
@@ -165,6 +191,7 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
         } else {
             assignedRSUs.add("rsu_3");
             assignedRSUs.add("rsu_4");
+            assignedRSUs.add("rsu_5");
         }
         return assignedRSUs;
     }
