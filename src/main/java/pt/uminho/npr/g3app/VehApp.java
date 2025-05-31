@@ -130,6 +130,7 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
                 getLog().infoSimTime(this, "Received RerouteMsg: " + rerouteMsg.toString());
                 if (!changedRoute) {
                     changedRoute = true;
+                    getLog().infoSimTime(this, "Applying reroute");
                     circumnavigateAffectedRoad("50952691#2", 0.0);
                 } else {
                     getLog().warnSimTime(this, "Reroute already applied, ignoring: " + rerouteMsg.toString());

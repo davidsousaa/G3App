@@ -62,9 +62,10 @@ public class RerouteMsg extends V2xMessage {
 
     @Override
     public String toString() {
-        return "RSUHello{"
+        return "RerouteMsg{"
                 + "timeStamp=" + timeStamp
                 + ", senderName='" + senderName + '\''
+                + ", newRoute='" + newRoute + '\''
                 + '}';
     }
 
