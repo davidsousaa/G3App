@@ -178,6 +178,7 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
         for (String rsuId : assignedRSUs) {
             RsuFogInteraction interaction = new RsuFogInteraction(getOs().getSimulationTime(), rsuId, "Reroute", getOs().getId());
             getOs().sendInteractionToRti(interaction);
+            getLog().infoSimTime(this, "Sent Reroute interaction to RSU: " + rsuId);
         }
         this.changedRoute = true;
     }
