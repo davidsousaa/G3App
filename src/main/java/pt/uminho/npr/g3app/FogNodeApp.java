@@ -1,14 +1,15 @@
 package pt.uminho.npr.g3app;
 
+import java.util.regex.*;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
 import javax.annotation.Nonnull;
-
 import org.eclipse.mosaic.rti.DATA;
 import org.eclipse.mosaic.rti.TIME;
-
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.ArrayList;
-import java.util.regex.*;
-
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.eclipse.mosaic.lib.util.scheduling.Event;
 import org.eclipse.mosaic.lib.objects.traffic.SumoTraciResult;
 import org.eclipse.mosaic.fed.application.app.AbstractApplication;
@@ -21,12 +22,11 @@ import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.Ca
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.ReceivedV2xMessage;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.CellModuleConfiguration;
 
-import java.util.ArrayList;
-
 public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
         implements CommunicationApplication, MosaicApplication {
 
     private ConcurrentHashMap<String, ConcurrentHashMap<String, Long>> laneOccupation = new ConcurrentHashMap<String, ConcurrentHashMap<String, Long>>();
+    private ConcurrentHashMap<String, MutablePair<Double, Integer>> laneSpeedInfo = new ConcurrentHashMap<>();
     private boolean changedRoute = false;
 
     @Override
@@ -40,6 +40,7 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
 
     @Override
     public void onShutdown() {
+        writeLaneStatsToCsv();
         getLog().infoSimTime(this, "Fog Node shutting down.");
     }
 
@@ -109,7 +110,7 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
 
     private void processMessage(RsuFogInteraction message) {
         String content = message.getContent();
-        //String messageType = content.split("\\{")[0].strip();
+        // String messageType = content.split("\\{")[0].strip();
         Pattern pattern = Pattern.compile("(\\w+Msg)\\{");
         Matcher matcher = pattern.matcher(content);
         String messageType = null;
@@ -132,7 +133,8 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
                 }
                 break;
             default:
-                getLog().warnSimTime(this, "Unknown message type received: " + messageType + " with content: " + content);
+                getLog().warnSimTime(this,
+                        "Unknown message type received: " + messageType + " with content: " + content);
                 break;
         }
     }
@@ -140,8 +142,23 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
     private void processStatusMessage(String message) {
         String laneId = message.split("senderLaneId=")[1].split("\\}")[0].strip();
         String vehicleId = message.split("senderName=")[1].split(",")[0].strip();
+        String vehicleSpeedString = message.split("senderSpeed=")[1].split(",")[0].strip();
+        Double vehicleSpeed = Double.parseDouble(vehicleSpeedString);
         String timestampString = message.split("timeStamp=")[1].split(",")[0].strip();
         long timestamp = Long.parseLong(timestampString);
+
+        laneSpeedInfo.compute(laneId, (key, pair) -> {
+            if (pair == null) {
+                return MutablePair.of(vehicleSpeed, 1);
+            } else {
+                double currentAvg = pair.getLeft();
+                int count = pair.getRight();
+                double newAvg = (currentAvg * count + vehicleSpeed) / (count + 1);
+                pair.setLeft(newAvg);
+                pair.setRight(count + 1);
+                return pair;
+            }
+        });
 
         // Update timestamp value of the vehicle
         for (ConcurrentHashMap.Entry<String, ConcurrentHashMap<String, Long>> entry : laneOccupation.entrySet()) {
@@ -176,7 +193,8 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
         }
 
         for (String rsuId : assignedRSUs) {
-            RsuFogInteraction interaction = new RsuFogInteraction(getOs().getSimulationTime(), rsuId, "Reroute", getOs().getId());
+            RsuFogInteraction interaction = new RsuFogInteraction(getOs().getSimulationTime(), rsuId, "Reroute",
+                    getOs().getId());
             getOs().sendInteractionToRti(interaction);
             getLog().infoSimTime(this, "Sent Reroute interaction to RSU: " + rsuId);
         }
@@ -195,6 +213,22 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
             assignedRSUs.add("rsu_5");
         }
         return assignedRSUs;
+    }
+
+    private void writeLaneStatsToCsv() {
+        String filename = "laneSpeedFog_" + getOs().getId() + ".csv"; // One file per Fog
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            writer.println("LaneID,AvgSpeed,CountSamples");
+            for (ConcurrentHashMap.Entry<String, MutablePair<Double, Integer>> entry : laneSpeedInfo.entrySet()) {
+                String laneId = entry.getKey();
+                double avgSpeed = entry.getValue().getLeft();
+                int count = entry.getValue().getRight();
+                writer.println(laneId + "," + avgSpeed + "," + count);
+            }
+            getLog().infoSimTime(this, "Lane speed stats written to: " + filename);
+        } catch (IOException e) {
+            getLog().warnSimTime(this, "Error writing lane speed CSV: " + e.getMessage());
+        }
     }
 
     @Override

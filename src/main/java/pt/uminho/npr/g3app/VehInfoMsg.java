@@ -55,7 +55,8 @@ public class VehInfoMsg extends V2xMessage {
         this.destination = destination;
         this.rsuConnected = rsuConnected;
         this.nextHop = nextHop;
-        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream(); final DataOutputStream dos = new DataOutputStream(baos)) {
+        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                final DataOutputStream dos = new DataOutputStream(baos)) {
             dos.writeLong(timeStamp);
             dos.writeUTF(senderName);
             SerializationUtils.encodeGeoPoint(dos, senderPos);
