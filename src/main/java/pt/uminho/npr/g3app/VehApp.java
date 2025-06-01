@@ -6,11 +6,12 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import org.eclipse.mosaic.lib.objects.vehicle.VehicleRoute;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.AdHocModuleConfiguration;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.CamBuilder;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.ReceivedAcknowledgement;
@@ -137,7 +138,14 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem>
                 if (!changedRoute) {
                     changedRoute = true;
                     getLog().infoSimTime(this, "Applying reroute");
-                    circumnavigateAffectedRoad("50952691#2", 0.0);
+                    // circumnavigateAffectedRoad("-50952691#2", 0.0);
+                    // circumnavigateAffectedRoad(":218641632_0_0", 0.0);
+                    // circumnavigateAffectedRoad(":218641632_1_0", 0.0);
+                    // circumnavigateAffectedRoad(":4748623596_1_0", 0.0);
+                    // WORKING circumnavigateAffectedRoad(":218641632_2_0", 0.0); // From x to
+                    // -50952691#2
+                    circumnavigateAffectedRoad(":218641632_3_0", 0.0);
+
                 } else {
                     getLog().warnSimTime(this, "Reroute already applied, ignoring: " + rerouteMsg.toString());
                 }
@@ -148,24 +156,98 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem>
         // log neighbors table to output.csv (can be done in onShutdown())
     }
 
-    private void circumnavigateAffectedRoad(final String affectedRoadId, double causedSpeed) {
-        ReRouteSpecificConnectionsCostFunction myCostFunction = new ReRouteSpecificConnectionsCostFunction();
-        myCostFunction.setConnectionSpeedMS(affectedRoadId, causedSpeed);
+    // private void circumnavigateAffectedRoad(final String affectedRoadId, double
+    // causedSpeed) {
+    // // Debug
+    // INavigationModule navigationModule = getOs().getNavigationModule();
 
+    // VehicleRoute currentRoute = navigationModule.getCurrentRoute();
+    // if (currentRoute != null) {
+    // getLog().infoSimTime(this, "Rota atual antes da mudança: " +
+    // currentRoute.toString());
+    // }
+
+    // ReRouteSpecificConnectionsCostFunction myCostFunction = new
+    // ReRouteSpecificConnectionsCostFunction();
+    // myCostFunction.setConnectionSpeedMS(affectedRoadId, causedSpeed);
+
+    // RoutingParameters routingParameters = new
+    // RoutingParameters().costFunction(myCostFunction);
+
+    // RoutingResponse response = navigationModule
+    // .calculateRoutes(new RoutingPosition(navigationModule.getTargetPosition()),
+    // routingParameters);
+
+    // CandidateRoute newRoute = response.getBestRoute();
+    // if (newRoute != null) {
+    // getLog().infoSimTime(this, "Alterar rota para evitar: " + affectedRoadId);
+    // getLog().infoSimTime(this, "New Route: " + newRoute.toString());
+    // boolean switched = navigationModule.switchRoute(newRoute);
+    // getLog().infoSimTime(this, "Switched: " + switched);
+    // } else {
+    // getLog().warnSimTime(this, "Nenhuma rota alternativa encontrada para evitar:
+    // " + affectedRoadId);
+    // }
+    // }
+    //
+    //
+    //
+    private void circumnavigateAffectedRoad(final String affectedRoadId, double causedSpeed) {
         INavigationModule navigationModule = getOs().getNavigationModule();
+
+        // Check current route DEBUG
+        VehicleRoute currentRoute = navigationModule.getCurrentRoute();
+        if (currentRoute != null) {
+            getLog().infoSimTime(this, "Rota atual antes da mudança: " + currentRoute.getConnectionIds());
+        } else {
+            getLog().warnSimTime(this, "Aviso: rota atual do veículo é null!");
+        }
+
+        // Define custom cost function to penalize affected road
+        ReRouteSpecificConnectionsCostFunction myCostFunction = new ReRouteSpecificConnectionsCostFunction();
+        getLog().infoSimTime(this, "affectedRoadId" + affectedRoadId);
+        myCostFunction.setConnectionSpeedMS(affectedRoadId, 0.0);
+        myCostFunction.setConnectionTravelTime(affectedRoadId, Long.parseLong("10000000000")); // MAYBE UNNECESSARY
 
         RoutingParameters routingParameters = new RoutingParameters().costFunction(myCostFunction);
 
-        RoutingResponse response = navigationModule
-                .calculateRoutes(new RoutingPosition(navigationModule.getTargetPosition()), routingParameters);
-
+        // Calculate new route
+        RoutingResponse response = navigationModule.calculateRoutes(
+                new RoutingPosition(navigationModule.getTargetPosition()),
+                routingParameters);
         CandidateRoute newRoute = response.getBestRoute();
-        if (newRoute != null) {
-            getLog().infoSimTime(this, "Alterar rota para evitar: " + affectedRoadId);
-            navigationModule.switchRoute(newRoute);
-        } else {
-            getLog().warnSimTime(this, "Nenhuma rota alternativa encontrada para evitar: " + affectedRoadId);
+        // List<CandidateRoute> others = response.getAlternativeRoutes();
+        // int i = 0;
+        // while (newRoute.getConnectionIds().contains("-50952691#2")) {
+        // if (others.size() == i) {
+        // getLog().infoSimTime(this, "not other options");
+        // break;
+        // }
+        // getLog().infoSimTime(this, "investigating new route");
+        // newRoute = others.get(i);
+        // i++;
+        // }
+
+        if (currentRoute != null && newRoute != null) {
+            List<String> currentEdges = currentRoute.getConnectionIds(); // List of edge IDs
+            List<String> newConnections = newRoute.getConnectionIds(); // List of connection IDs (i.e.,
+                                                                       // from-edge->to-edge)
+            // Just compare as strings for debugging
+            getLog().infoSimTime(this, "Current edges: " + currentEdges);
+            getLog().infoSimTime(this, "New connection IDs: " + newConnections);
+
+            // Optional: crude check if some part overlaps
+            boolean similar = newConnections.stream()
+                    .anyMatch(conn -> currentEdges.stream().anyMatch(edge -> conn.contains(edge)));
+
+            if (similar) {
+                getLog().infoSimTime(this, "Some parts of the new route overlap with current route.");
+            } else {
+                getLog().infoSimTime(this, "New route is entirely different from current route.");
+            }
         }
+        boolean switched = navigationModule.switchRoute(newRoute);
+        getLog().infoSimTime(this, "switched " + switched);
     }
 
     public void updateRSUNeighbors(RSUHello rsuHello) {

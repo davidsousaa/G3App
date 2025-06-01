@@ -140,7 +140,7 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
     }
 
     private void processStatusMessage(String message) {
-        String laneId = message.split("senderLaneId=")[1].split("\\}")[0].strip();
+        String laneId = message.split("senderLaneId=")[1].split(",")[0].strip();
         String vehicleId = message.split("senderName=")[1].split(",")[0].strip();
         String vehicleSpeedString = message.split("senderSpeed=")[1].split(",")[0].strip();
         Double vehicleSpeed = Double.parseDouble(vehicleSpeedString);
@@ -216,7 +216,7 @@ public class FogNodeApp extends AbstractApplication<ServerOperatingSystem>
     }
 
     private void writeLaneStatsToCsv() {
-        String filename = "laneSpeedFog_" + getOs().getId() + ".csv"; // One file per Fog
+        String filename = "logs/laneSpeedFog_" + getOs().getId() + ".csv"; // One file per Fog
         try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
             writer.println("LaneID,AvgSpeed,CountSamples");
             for (ConcurrentHashMap.Entry<String, MutablePair<Double, Integer>> entry : laneSpeedInfo.entrySet()) {
