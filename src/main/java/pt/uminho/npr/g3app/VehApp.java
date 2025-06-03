@@ -1,19 +1,22 @@
 package pt.uminho.npr.g3app;
 
+import java.awt.Color;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import org.eclipse.mosaic.lib.objects.vehicle.VehicleRoute;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.AdHocModuleConfiguration;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.CamBuilder;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.ReceivedAcknowledgement;
 import org.eclipse.mosaic.fed.application.ambassador.simulation.communication.ReceivedV2xMessage;
+import org.eclipse.mosaic.fed.application.ambassador.simulation.navigation.INavigationModule;
 import org.eclipse.mosaic.fed.application.app.AbstractApplication;
 import org.eclipse.mosaic.fed.application.app.api.CommunicationApplication;
 import org.eclipse.mosaic.fed.application.app.api.VehicleApplication;
@@ -21,20 +24,29 @@ import org.eclipse.mosaic.fed.application.app.api.os.VehicleOperatingSystem;
 import org.eclipse.mosaic.interactions.communication.V2xMessageTransmission;
 import org.eclipse.mosaic.lib.enums.AdHocChannel;
 import org.eclipse.mosaic.lib.geo.GeoPoint;
-import org.eclipse.mosaic.lib.geo.MutableGeoPoint;
 import org.eclipse.mosaic.lib.objects.v2x.MessageRouting;
 import org.eclipse.mosaic.lib.objects.v2x.V2xMessage;
 import org.eclipse.mosaic.lib.objects.vehicle.VehicleData;
+import org.eclipse.mosaic.lib.routing.CandidateRoute;
+import org.eclipse.mosaic.lib.routing.RoutingParameters;
+import org.eclipse.mosaic.lib.routing.RoutingPosition;
+import org.eclipse.mosaic.lib.routing.RoutingResponse;
+import org.eclipse.mosaic.lib.routing.util.ReRouteSpecificConnectionsCostFunction;
 import org.eclipse.mosaic.lib.util.scheduling.Event;
 import org.eclipse.mosaic.rti.TIME;
 
-public class VehApp extends AbstractApplication<VehicleOperatingSystem> implements VehicleApplication, CommunicationApplication {
+public class VehApp extends AbstractApplication<VehicleOperatingSystem>
+        implements VehicleApplication, CommunicationApplication {
 
     private final long MsgDelay = 200 * TIME.MILLI_SECOND;
     private final int Power = 50;
     private final double Distance = 140.0;
 
     private int setVal;
+    private boolean changedRoute = false;
+    private final GeoPoint roadblockTriggerPoint = GeoPoint.latLon(41.551134, -8.411374);
+    private final double roadblockTriggerRadius = 10.0;
+    private boolean roadblockTriggered = false;
 
     private double vehHeading;
     private double vehSpeed;
@@ -46,11 +58,10 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
     private Map<String, RSUHello> neighborsRSU = new ConcurrentHashMap<>();
     private final Long NeighborTimeout = 500 * TIME.MILLI_SECOND;
     private final Long RSUTimeout = 800 * TIME.MILLI_SECOND;
-    private GeoPoint rsuPos = new MutableGeoPoint(0.0, 0.0);
 
     @Override
     public void onShutdown() {
-        //writeNeighborsToCsv();
+        // writeNeighborsToCsv();
         getLog().infoSimTime(this, "onShutdown");
         getOs().getAdHocModule().disable();
     }
@@ -65,6 +76,11 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
                 .create());
 
         getLog().infoSimTime(this, "onStartup: Set up");
+        if (getOs().getId().equals("veh_75")) {
+            getOs().requestVehicleParametersUpdate()
+                    .changeColor(Color.RED)
+                    .apply();
+        }
         setVal = 0;
         getOs().getEventManager().addEvent(getOs().getSimulationTime() + MsgDelay, this);
     }
@@ -80,32 +96,158 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
 
     @Override
     public void onMessageReceived(@Nonnull ReceivedV2xMessage receivedMessage) {
-        //getLog().infoSimTime(this, "onMessageReceived");
-        //TODO: process received message
+        // getLog().infoSimTime(this, "onMessageReceived");
+        // TODO: process received message
         V2xMessage msg = receivedMessage.getMessage();
 
-        if (msg instanceof VehInfoMsg vehInfoMsg) {
+        switch (msg) {
+            case VehInfoMsg vehInfoMsg -> {
 
-            if (vehInfoMsg.getSenderName().equals(getOs().getId())) {
-                return;
+                if (vehInfoMsg.getSenderName().equals(getOs().getId())) {
+                    return;
+                }
+                updateNeighbors(vehInfoMsg);
+
+                // se a flag rsuconnected for true, dar drop. Se for false e for o melhor
+                // vizinho, dar forward para o RSU. Senão, esperar pelo timeout, se não receber
+                // uma mensagem igual a uma que tenha no buffer, enviar ele para o melhor
+                // neighbor. Falta criar função semelhante à sendVehInfoMsg para dar o forward,
+                // ou incorporar isso aqui
+                if (vehInfoMsg.getRsuConnected() || !vehInfoMsg.getNextHop().equals(getOs().getId())) {
+                    // Ignore messages from the RSU or messages that are not meant for this vehicle
+                    return;
+                } else {
+                    getLog().infoSimTime(this, "Forwarding VehInfoMsg: " + vehInfoMsg.toString());
+                    forwardMessage(vehInfoMsg);
+                }
             }
-            updateNeighbors(vehInfoMsg);
+            case RSUHello rsuHello ->
+                updateRSUNeighbors(rsuHello);
+            case WarningMsg warningMsg -> {
+                if (warningMsg.getSenderName().equals(getOs().getId()) || warningMsg.getRsuConnected()
+                        || !warningMsg.getNextHop().equals(getOs().getId())) {
+                    return;
+                } else {
+                    getLog().infoSimTime(this, "Forwarding WarningMsg: " + warningMsg.toString());
+                    forwardMessage(warningMsg);
+                }
 
-            //se a flag rsuconnected for true, dar drop. Se for false e for o melhor vizinho, dar forward para o RSU. Senão, esperar pelo timeout, se não receber uma mensagem igual a uma que tenha no buffer, enviar ele para o melhor neighbor. Falta criar função semelhante à sendVehInfoMsg para dar o forward, ou incorporar isso aqui
-            if (vehInfoMsg.getRsuConnected() || !vehInfoMsg.getNextHop().equals(getOs().getId())) {
-                // Ignore messages from the RSU or messages that are not meant for this vehicle
-                return;
-            } else {
-                getLog().infoSimTime(this, "Forwarding VehInfoMsg: " + vehInfoMsg.toString());
-                forwardMessage(vehInfoMsg);
             }
-        } else if (msg instanceof RSUHello rsuHello) {
+            case RerouteMsg rerouteMsg -> {
+                getLog().infoSimTime(this, "Received RerouteMsg: " + rerouteMsg.toString());
+                if (!changedRoute) {
+                    changedRoute = true;
+                    getLog().infoSimTime(this, "Applying reroute");
+                    // circumnavigateAffectedRoad("-50952691#2", 0.0);
+                    // circumnavigateAffectedRoad(":218641632_0_0", 0.0);
+                    // circumnavigateAffectedRoad(":218641632_1_0", 0.0);
+                    // circumnavigateAffectedRoad(":4748623596_1_0", 0.0);
+                    // WORKING circumnavigateAffectedRoad(":218641632_2_0", 0.0); // From x to
+                    // -50952691#2
+                    circumnavigateAffectedRoad(":218641632_3_0", 0.0);
 
-            updateRSUNeighbors(rsuHello);
+                } else {
+                    getLog().warnSimTime(this, "Reroute already applied, ignoring: " + rerouteMsg.toString());
+                }
+            }
+            default -> {
+            }
+        }
+        // log neighbors table to output.csv (can be done in onShutdown())
+    }
 
+    // private void circumnavigateAffectedRoad(final String affectedRoadId, double
+    // causedSpeed) {
+    // // Debug
+    // INavigationModule navigationModule = getOs().getNavigationModule();
+
+    // VehicleRoute currentRoute = navigationModule.getCurrentRoute();
+    // if (currentRoute != null) {
+    // getLog().infoSimTime(this, "Rota atual antes da mudança: " +
+    // currentRoute.toString());
+    // }
+
+    // ReRouteSpecificConnectionsCostFunction myCostFunction = new
+    // ReRouteSpecificConnectionsCostFunction();
+    // myCostFunction.setConnectionSpeedMS(affectedRoadId, causedSpeed);
+
+    // RoutingParameters routingParameters = new
+    // RoutingParameters().costFunction(myCostFunction);
+
+    // RoutingResponse response = navigationModule
+    // .calculateRoutes(new RoutingPosition(navigationModule.getTargetPosition()),
+    // routingParameters);
+
+    // CandidateRoute newRoute = response.getBestRoute();
+    // if (newRoute != null) {
+    // getLog().infoSimTime(this, "Alterar rota para evitar: " + affectedRoadId);
+    // getLog().infoSimTime(this, "New Route: " + newRoute.toString());
+    // boolean switched = navigationModule.switchRoute(newRoute);
+    // getLog().infoSimTime(this, "Switched: " + switched);
+    // } else {
+    // getLog().warnSimTime(this, "Nenhuma rota alternativa encontrada para evitar:
+    // " + affectedRoadId);
+    // }
+    // }
+    //
+    //
+    //
+    private void circumnavigateAffectedRoad(final String affectedRoadId, double causedSpeed) {
+        INavigationModule navigationModule = getOs().getNavigationModule();
+
+        // Check current route DEBUG
+        VehicleRoute currentRoute = navigationModule.getCurrentRoute();
+        if (currentRoute != null) {
+            getLog().infoSimTime(this, "Rota atual antes da mudança: " + currentRoute.getConnectionIds());
+        } else {
+            getLog().warnSimTime(this, "Aviso: rota atual do veículo é null!");
         }
 
-        // log neighbors table to output.csv (can be done in onShutdown())
+        // Define custom cost function to penalize affected road
+        ReRouteSpecificConnectionsCostFunction myCostFunction = new ReRouteSpecificConnectionsCostFunction();
+        getLog().infoSimTime(this, "affectedRoadId" + affectedRoadId);
+        myCostFunction.setConnectionSpeedMS(affectedRoadId, 0.0);
+        myCostFunction.setConnectionTravelTime(affectedRoadId, Long.parseLong("10000000000")); // MAYBE UNNECESSARY
+
+        RoutingParameters routingParameters = new RoutingParameters().costFunction(myCostFunction);
+
+        // Calculate new route
+        RoutingResponse response = navigationModule.calculateRoutes(
+                new RoutingPosition(navigationModule.getTargetPosition()),
+                routingParameters);
+        CandidateRoute newRoute = response.getBestRoute();
+        // List<CandidateRoute> others = response.getAlternativeRoutes();
+        // int i = 0;
+        // while (newRoute.getConnectionIds().contains("-50952691#2")) {
+        // if (others.size() == i) {
+        // getLog().infoSimTime(this, "not other options");
+        // break;
+        // }
+        // getLog().infoSimTime(this, "investigating new route");
+        // newRoute = others.get(i);
+        // i++;
+        // }
+
+        if (currentRoute != null && newRoute != null) {
+            List<String> currentEdges = currentRoute.getConnectionIds(); // List of edge IDs
+            List<String> newConnections = newRoute.getConnectionIds(); // List of connection IDs (i.e.,
+                                                                       // from-edge->to-edge)
+            // Just compare as strings for debugging
+            getLog().infoSimTime(this, "Current edges: " + currentEdges);
+            getLog().infoSimTime(this, "New connection IDs: " + newConnections);
+
+            // Optional: crude check if some part overlaps
+            boolean similar = newConnections.stream()
+                    .anyMatch(conn -> currentEdges.stream().anyMatch(edge -> conn.contains(edge)));
+
+            if (similar) {
+                getLog().infoSimTime(this, "Some parts of the new route overlap with current route.");
+            } else {
+                getLog().infoSimTime(this, "New route is entirely different from current route.");
+            }
+        }
+        boolean switched = navigationModule.switchRoute(newRoute);
+        getLog().infoSimTime(this, "switched " + switched);
     }
 
     public void updateRSUNeighbors(RSUHello rsuHello) {
@@ -117,23 +259,43 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
 
         if (getOs().getId().equals("veh_5")) {
             getLog().infoSimTime(this, "Received RSUHello: " + rsuHello.toString());
-            getLog().infoSimTime(this, "RSU connected: " + neighborsRSUTimestamps.keySet().toString() + " | " + neighborsRSU.keySet().toString());
+            getLog().infoSimTime(this, "RSU connected: " + neighborsRSUTimestamps.keySet().toString() + " | "
+                    + neighborsRSU.keySet().toString());
         }
 
         removeOldRSUs();
     }
 
-    public void forwardMessage(VehInfoMsg vehInfoMsg) {
-        boolean rsuConnected = this.isRSUConnected();
-        MessageRouting routing = getOs().getAdHocModule().createMessageRouting().viaChannel(AdHocChannel.CCH).topoBroadCast();
-        String rsu = this.getRSU();
+    public void forwardMessage(V2xMessage message) {
+        boolean rsuConnected = isRSUConnected();
+        MessageRouting routing = getOs().getAdHocModule().createMessageRouting().viaChannel(AdHocChannel.CCH)
+                .topoBroadCast();
+        String rsu = getRSU();
 
         if (rsuConnected) {
-            VehInfoMsg forwardedMsg = new VehInfoMsg(routing, vehInfoMsg.getTimeStamp(), vehInfoMsg.getSenderName(), vehInfoMsg.getSenderPosition(), vehInfoMsg.getHeading(), vehInfoMsg.getSpeed(), vehInfoMsg.getLaneId(), vehInfoMsg.getDestination(), rsuConnected, rsu);
+            switch (message) {
+                case VehInfoMsg vehInfoMsg -> {
+                    VehInfoMsg forwardedMsg = new VehInfoMsg(routing, vehInfoMsg.getTimeStamp(),
+                            vehInfoMsg.getSenderName(), vehInfoMsg.getSenderPosition(), vehInfoMsg.getHeading(),
+                            vehInfoMsg.getSpeed(), vehInfoMsg.getLaneId(), vehInfoMsg.getDestination(), rsuConnected,
+                            rsu);
 
-            getOs().getAdHocModule().sendV2xMessage(forwardedMsg);
+                    getOs().getAdHocModule().sendV2xMessage(forwardedMsg);
 
-            getLog().infoSimTime(this, "Forwarded VehInfoMsg to RSU: " + vehInfoMsg.toString());
+                    getLog().infoSimTime(this, "Forwarded VehInfoMsg to RSU: " + vehInfoMsg.toString());
+                }
+                case WarningMsg warningMsg -> {
+                    WarningMsg forwardedWarning = new WarningMsg(routing, warningMsg.getTimeStamp(),
+                            warningMsg.getSenderName(), warningMsg.getSenderPosition(), warningMsg.getDestination(),
+                            rsuConnected, rsu, warningMsg.getWarningMessage());
+
+                    getOs().getAdHocModule().sendV2xMessage(forwardedWarning);
+
+                    getLog().infoSimTime(this, "Forwarded WarningMsg to RSU: " + forwardedWarning.toString());
+                }
+                default -> {
+                }
+            }
         } else {
             getLog().warnSimTime(this, "Cannot forward message, RSU is not connected.");
         }
@@ -149,7 +311,8 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         removeOldNeighbors();
     }
 
-    // Em vez que fazer os loops, podemos remover apenas quando precisamos de usar os neighbors e, se o timestamp for maior que o timeout, ignore e remove
+    // Em vez que fazer os loops, podemos remover apenas quando precisamos de usar
+    // os neighbors e, se o timestamp for maior que o timeout, ignore e remove
     public void removeOldNeighbors() {
         long currentTime = getOs().getSimulationTime();
         Iterator<Map.Entry<String, Long>> iterator = neighborsTimestamps.entrySet().iterator();
@@ -193,6 +356,42 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         this.vehHeading = updatedVehicleData.getHeading().doubleValue();
         this.vehSpeed = updatedVehicleData.getSpeed();
         this.vehLane = updatedVehicleData.getRoadPosition().getLaneIndex();
+
+        GeoPoint currentPosition = updatedVehicleData.getPosition();
+
+        if (getOs().getId().equals("veh_75") && !roadblockTriggered
+                && currentPosition.distanceTo(roadblockTriggerPoint) < roadblockTriggerRadius) {
+            getLog().infoSimTime(this, "Roadblock triggered at position: " + currentPosition.toString());
+            roadblockTriggered = true;
+            sendWarningMsg();
+        }
+
+    }
+
+    public void sendWarningMsg() {
+        MessageRouting routing = getOs().getAdHocModule().createMessageRouting().viaChannel(AdHocChannel.CCH)
+                .topoBroadCast();
+        long time = getOs().getSimulationTime();
+        String rsu = this.getRSU();
+        boolean isRsuConnected = isRSUConnected();
+        WarningMsg warningMsg;
+
+        if (isRsuConnected) {
+            warningMsg = new WarningMsg(routing, time, getOs().getId(), getOs().getPosition(), rsu, isRsuConnected, rsu,
+                    "Roadblock");
+            getOs().getAdHocModule().sendV2xMessage(warningMsg);
+            getLog().infoSimTime(this, "Sent WarningMsg to RSU: " + warningMsg.toString());
+        } else {
+            String bestNeighbor = getBestNeighbor();
+            if (bestNeighbor != null) {
+                warningMsg = new WarningMsg(routing, time, getOs().getId(), getOs().getPosition(), rsu, isRsuConnected,
+                        bestNeighbor, "Roadblock");
+                getOs().getAdHocModule().sendV2xMessage(warningMsg);
+                getLog().infoSimTime(this, "Sent WarningMsg to best neighbor: " + warningMsg.toString());
+            } else {
+                getLog().warnSimTime(this, "No suitable neighbor found to forward the message.");
+            }
+        }
     }
 
     @Override
@@ -261,7 +460,8 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
                 continue;
             }
 
-            double distance = calculateDistance(rsuPos.getLatitude(), rsuPos.getLongitude(), neighborPos.getLatitude(), neighborPos.getLongitude());
+            double distance = calculateDistance(rsuPos.getLatitude(), rsuPos.getLongitude(), neighborPos.getLatitude(),
+                    neighborPos.getLongitude());
 
             if (bestNeighbor == null || distance < bestDistance) {
                 bestNeighbor = neighborId;
@@ -280,29 +480,33 @@ public class VehApp extends AbstractApplication<VehicleOperatingSystem> implemen
         double dLon = Math.toRadians(lon2 - lon1);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                        * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     }
 
     private void sendVehInfoMsg() {
-        MessageRouting routing = getOs().getAdHocModule().createMessageRouting().viaChannel(AdHocChannel.CCH).topoBroadCast();
+        MessageRouting routing = getOs().getAdHocModule().createMessageRouting().viaChannel(AdHocChannel.CCH)
+                .topoBroadCast();
         long time = getOs().getSimulationTime();
         String rsu = this.getRSU();
         VehInfoMsg message = null;
-        if (rsu == null) { //Caso inicial, onde podem ainda não ter recebido mensagens de RSUHello do primeiro RSU
+        if (rsu == null) { // Caso inicial, onde podem ainda não ter recebido mensagens de RSUHello do
+                           // primeiro RSU
             rsu = "rsu_0";
         }
         boolean isRsuConnected = isRSUConnected();
 
         if (isRsuConnected) {
-            message = new VehInfoMsg(routing, time, getOs().getId(), getOs().getPosition(), this.vehHeading, this.vehSpeed, this.vehLane, rsu, isRsuConnected, rsu);
+            message = new VehInfoMsg(routing, time, getOs().getId(), getOs().getPosition(), this.vehHeading,
+                    this.vehSpeed, this.vehLane, rsu, isRsuConnected, rsu);
 
             getOs().getAdHocModule().sendV2xMessage(message);
         } else {
             String bestNeighbor = getBestNeighbor();
             if (bestNeighbor != null) {
-                message = new VehInfoMsg(routing, time, getOs().getId(), getOs().getPosition(), this.vehHeading, this.vehSpeed, this.vehLane, rsu, isRsuConnected, bestNeighbor);
+                message = new VehInfoMsg(routing, time, getOs().getId(), getOs().getPosition(), this.vehHeading,
+                        this.vehSpeed, this.vehLane, rsu, isRsuConnected, bestNeighbor);
                 getOs().getAdHocModule().sendV2xMessage(message);
             } else {
                 getLog().warnSimTime(this, "No suitable neighbor found to forward the message.");

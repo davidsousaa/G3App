@@ -10,7 +10,7 @@
       "sigma": 0.5,
       "speedDeviation": 0.1,
       "tau": 1,
-      "route": "r_0",
+      "route": "r_1",
       "applications": ["pt.uminho.npr.g3app.VehApp"]
     },
     {
@@ -78,7 +78,7 @@
       "endingTime": "950.0 s",
       "targetFlow": 1800,
       "maxNumberVehicles": 300,
-      "route": "r_0",
+      "route": "r_1",
       "LaneSelectionMode": "RANDOM",
       "types": [
         {
@@ -99,7 +99,7 @@
     {
       "name": "FogNode",
       "position": {
-        "latitude": 41.552900,
+        "latitude": 41.5529,
         "longitude": -8.408841
       },
       "applications": ["pt.uminho.npr.g3app.FogNodeApp"]
